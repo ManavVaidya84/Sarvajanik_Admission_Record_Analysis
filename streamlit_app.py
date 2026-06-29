@@ -435,22 +435,23 @@ def get_gender_program_data(df: pd.DataFrame, top_n: int = 8):
 
 @st.cache_data(show_spinner=False)
 def compute_board_counts(df: pd.DataFrame):
-    """Optimized board detection — only scans string/object columns instead of ALL columns."""
+    """Robust board detection — checks each column individually, no row-joining."""
     if df.empty:
         return pd.DataFrame(columns=['Board', 'Count'])
 
-    # Only scan string columns (skip numeric columns entirely — huge speedup)
     str_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    if not str_cols:
-        return pd.DataFrame({'Board': ['Other'], 'Count': [len(df)]})
+    gseb_mask = pd.Series(False, index=df.index)
+    cbse_mask = pd.Series(False, index=df.index)
+    icse_mask = pd.Series(False, index=df.index)
+    for col in str_cols:
+        col_upper = df[col].astype(str).str.upper()
+        gseb_mask = gseb_mask | col_upper.str.contains('GSEB', na=False)
+        cbse_mask = cbse_mask | col_upper.str.contains('CBSE', na=False)
+        icse_mask = icse_mask | col_upper.str.contains('ICSE', na=False)
 
-    # Limit to max 15 string columns for speed
-    str_cols = str_cols[:15]
-    combined = df[str_cols].fillna('').astype(str).apply(lambda x: ' '.join(x), axis=1).str.upper()
-
-    gseb = int(combined.str.contains('GSEB', regex=False).sum())
-    cbse = int(combined.str.contains('CBSE', regex=False).sum())
-    icse = int(combined.str.contains('ICSE', regex=False).sum())
+    gseb = int(gseb_mask.sum())
+    cbse = int(cbse_mask.sum())
+    icse = int(icse_mask.sum())
     other = max(0, len(df) - gseb - cbse - icse)
 
     board_df = pd.DataFrame({
