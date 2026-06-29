@@ -446,7 +446,7 @@ def compute_board_counts(df: pd.DataFrame):
 
     # Limit to max 15 string columns for speed
     str_cols = str_cols[:15]
-    combined = df[str_cols].fillna('').astype(str).agg(' '.join, axis=1).str.upper()
+    combined = df[str_cols].fillna('').astype(str).apply(lambda x: ' '.join(x), axis=1).str.upper()
 
     gseb = int(combined.str.contains('GSEB', regex=False).sum())
     cbse = int(combined.str.contains('CBSE', regex=False).sum())
