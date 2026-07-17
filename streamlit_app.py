@@ -395,9 +395,9 @@ def _get_confirmed_count(df: pd.DataFrame) -> int:
 
 @st.cache_data(show_spinner=False)
 def get_top_programs(df: pd.DataFrame, n: int = 10):
-    if df.empty or 'Program_Select_1' not in df.columns:
+    if df.empty or 'Program1' not in df.columns:
         return pd.Series(dtype='int64')
-    return df['Program_Select_1'].value_counts().head(n)
+    return df['Program1'].value_counts().head(n)
 
 
 @st.cache_data(show_spinner=False)
@@ -413,12 +413,12 @@ def get_city_counts(df: pd.DataFrame, n: int = 15):
 
 @st.cache_data(show_spinner=False)
 def get_gender_program_data(df: pd.DataFrame, top_n: int = 8):
-    if df.empty or 'Gender' not in df.columns or 'Program_Select_1' not in df.columns:
+    if df.empty or 'Gender' not in df.columns or 'Program1' not in df.columns:
         return pd.Series(dtype='int64'), pd.DataFrame(), pd.DataFrame()
     gender_dist = df['Gender'].value_counts()
-    top_progs = df['Program_Select_1'].value_counts().head(top_n).index
-    gp = (df[df['Program_Select_1'].isin(top_progs)]
-          .groupby(['Gender', 'Program_Select_1'], observed=True)
+    top_progs = df['Program1'].value_counts().head(top_n).index
+    gp = (df[df['Program1'].isin(top_progs)]
+          .groupby(['Gender', 'Program1'], observed=True)
           .size().reset_index(name='Count'))
     gender_stats = (
         df.groupby('Gender', observed=True)['Status']
@@ -697,7 +697,7 @@ elif page == "👥 Gender Analysis":
             wrap_chart(fig1, height=380)
         with c2:
             if not gp.empty:
-                fig2 = px.bar(gp, x='Program_Select_1', y='Count', color='Gender',
+                fig2 = px.bar(gp, x='Program1', y='Count', color='Gender',
                               title="Program Preference by Gender", barmode='group',
                               color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
                 wrap_chart(fig2, height=380, xaxis_extra={'tickangle': -30})
