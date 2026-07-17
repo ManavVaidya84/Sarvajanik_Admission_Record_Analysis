@@ -498,8 +498,8 @@ if page == "🏠 Home Overview":
 
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty and 'Program_Select_1' in df.columns:
-        top10 = df['Program_Select_1'].value_counts().head(10)
+    if not df.empty and 'Program1' in df.columns:
+        top10 = df['Program1'].value_counts().head(10)
         fig = px.bar(top10, text_auto=True, title="Top 10 Most Applied Programs",
                      color_discrete_sequence=COLORS)
         fig.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
@@ -540,8 +540,8 @@ elif page == "🏆 Program Popularity":
     st.title("Program Popularity")
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty and 'Program_Select_1' in df.columns:
-        top15 = df['Program_Select_1'].value_counts().head(15).reset_index()
+    if not df.empty and 'Program1' in df.columns:
+        top15 = df['Program1'].value_counts().head(15).reset_index()
         top15.columns = ['Program', 'Count']
         fig = px.bar(top15, x='Count', y='Program', orientation='h',
                      text_auto=True, title="Top 15 Programs by Demand",
@@ -581,7 +581,7 @@ elif page == "👥 Gender Analysis":
     st.title("Gender Analysis")
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty and 'Gender' in df.columns and 'Program_Select_1' in df.columns:
+    if not df.empty and 'Gender' in df.columns and 'Program1' in df.columns:
         c1, c2 = st.columns([2, 3])
         with c1:
             gender_dist = df['Gender'].value_counts()
@@ -591,11 +591,11 @@ elif page == "👥 Gender Analysis":
             fig1.update_traces(textfont_color='#e2e8f0', marker_line_color='rgba(0,0,0,0)')
             wrap_chart(fig1, height=380)
         with c2:
-            top_progs = df['Program_Select_1'].value_counts().head(8).index
-            gp = (df[df['Program_Select_1'].isin(top_progs)]
-                  .groupby(['Gender', 'Program_Select_1'], observed=True)
+            top_progs = df['Program1'].value_counts().head(8).index
+            gp = (df[df['Program1'].isin(top_progs)]
+                  .groupby(['Gender', 'Program1'], observed=True)
                   .size().reset_index(name='Count'))
-            fig2 = px.bar(gp, x='Program_Select_1', y='Count', color='Gender',
+            fig2 = px.bar(gp, x='Program1', y='Count', color='Gender',
                           title="Program Preference by Gender", barmode='group',
                           color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
             wrap_chart(fig2, height=380, xaxis_extra={'tickangle': -30})
