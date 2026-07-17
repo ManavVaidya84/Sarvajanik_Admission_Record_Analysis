@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+from sklearn.neighbors import KNeighborsClassifier
 
 st.set_page_config(
     page_title="Sarvajanik University Analytics",
@@ -325,6 +326,21 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         )
     if 'Status' in df.columns:
         df['Status'] = df['Status'].fillna('Inquiry').astype(str)
+
+    # ---- Single source of truth for "is this admission confirmed?" ----
+    # NOTE: 'Status' only ever holds Submitted / Inquiry / Not Submitted — it
+    # never contains the word "Confirmed", so checks against Status alone
+    # always evaluate to 0. The real signal is the dedicated 'Confirmed'
+    # column (Yes/No), falling back to 'Confirmation Date' being filled in,
+    # and only then to a text search on Status for older/other datasets.
+    if 'Confirmed' in df.columns:
+        df['_IsConfirmed'] = df['Confirmed'].astype(str).str.strip().str.lower().isin(['yes', 'true', '1'])
+    elif 'Confirmation Date' in df.columns:
+        df['_IsConfirmed'] = df['Confirmation Date'].notna()
+    elif 'Status' in df.columns:
+        df['_IsConfirmed'] = df['Status'].str.contains('Confirmed|Confirm|Admitted', na=False, case=False)
+    else:
+        df['_IsConfirmed'] = False
     return df
 
 
@@ -342,6 +358,8 @@ def compute_kpis(df: pd.DataFrame):
 def get_confirmed_count(df: pd.DataFrame) -> int:
     if df.empty:
         return 0
+    if '_IsConfirmed' in df.columns:
+        return int(df['_IsConfirmed'].sum())
     if 'Confirmed' in df.columns:
         return int(df['Confirmed'].astype(str).str.contains('Yes|True|1', na=False, case=False).sum())
     if 'Confirmation Date' in df.columns:
@@ -349,6 +367,45 @@ def get_confirmed_count(df: pd.DataFrame) -> int:
     if 'Status' in df.columns:
         return int(df['Status'].str.contains('Confirmed|Confirm|Admitted', na=False, case=False).sum())
     return 0
+
+
+MARKS_COL = '12th/ HSC Overall / Diploma'
+
+
+@st.cache_resource(show_spinner=False)
+def train_program_model(df: pd.DataFrame):
+    """
+    Train a K-Nearest-Neighbours classifier on real confirmed admissions:
+    feature = 12th/HSC percentage, label = the program (Program1) the
+    student actually got confirmed into. This lets us predict, for any
+    percentage a prospective student enters, which programs students with
+    a similar percentage historically got admitted to — a genuine
+    data-driven recommendation instead of a fixed if/else rule.
+    Returns (model, n_training_rows) or (None, 0) if there isn't enough
+    clean data to train on.
+    """
+    if df.empty or MARKS_COL not in df.columns or 'Program1' not in df.columns or '_IsConfirmed' not in df.columns:
+        return None, 0
+
+    data = df.loc[df['_IsConfirmed'], [MARKS_COL, 'Program1']].dropna()
+    # Drop bad data entry (some rows have percentages > 100, e.g. CGPA*10 slip-ups)
+    data = data[(data[MARKS_COL] >= 0) & (data[MARKS_COL] <= 100)]
+
+    # Only keep programs with enough confirmed history to be a statistically
+    # meaningful signal (avoids the model "recommending" a one-off outlier)
+    counts = data['Program1'].value_counts()
+    valid_programs = counts[counts >= 15].index
+    data = data[data['Program1'].isin(valid_programs)]
+
+    if len(data) < 30 or data['Program1'].nunique() < 2:
+        return None, 0
+
+    X = data[[MARKS_COL]].values
+    y = data['Program1'].values
+    k = min(25, len(data) - 1)
+    model = KNeighborsClassifier(n_neighbors=k, weights='distance')
+    model.fit(X, y)
+    return model, len(data)
 
 
 def wrap_chart(fig, height=500, xaxis_extra=None, yaxis_extra=None):
@@ -602,11 +659,11 @@ elif page == "👥 Gender Analysis":
 
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
         gender_stats = (
-            df.groupby('Gender', observed=True)['Status']
+            df.groupby('Gender', observed=True)
             .agg(
-                Total='count',
-                Submitted=lambda x: x.str.contains('Submitted|Submit', na=False, case=False).sum(),
-                Confirmed=lambda x: x.str.contains('Confirmed|Confirm|Admitted', na=False, case=False).sum()
+                Total=('Status', 'count'),
+                Submitted=('Status', lambda x: x.str.contains('Submitted|Submit', na=False, case=False).sum()),
+                Confirmed=('_IsConfirmed', 'sum')
             )
             .reset_index()
         )
@@ -686,10 +743,10 @@ elif page == "🔮 Advanced Analytics":
         with c1:
             if 'Year' in df.columns and 'Status' in df.columns:
                 yearly = (
-                    df.groupby('Year')['Status']
+                    df.groupby('Year')
                     .agg(
-                        Total='count',
-                        Confirmed=lambda x: x.str.contains('Confirmed|Confirm|Admitted', na=False, case=False).sum()
+                        Total=('Status', 'count'),
+                        Confirmed=('_IsConfirmed', 'sum')
                     )
                     .reset_index()
                 )
@@ -701,17 +758,26 @@ elif page == "🔮 Advanced Analytics":
                 wrap_chart(fig1)
 
         with c2:
-            st.markdown("**🎯 Program Recommendation**")
+            st.markdown("**🎯 Program Recommendation (ML Model)**")
             marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
-            if marks >= 85:
-                rec, icon = "B.Tech / B.Sc. (IT) / Biotechnology", "🥇"
-            elif marks >= 70:
-                rec, icon = "BBA / B.Com / B.Sc. Programs", "🥈"
-            elif marks >= 60:
-                rec, icon = "B.A. / General Undergraduate", "🥉"
+
+            model, n_train = train_program_model(df)
+            if model is not None:
+                st.caption(f"Model trained on {n_train:,} confirmed admissions (2023–2026), matched by 12th % → actual program.")
+                proba = model.predict_proba([[marks]])[0]
+                classes = model.classes_
+                top_idx = proba.argsort()[::-1][:3]
+                medals = ["🥇", "🥈", "🥉"]
+                any_shown = False
+                for rank, idx in enumerate(top_idx):
+                    if proba[idx] <= 0:
+                        continue
+                    any_shown = True
+                    st.markdown(f"**{medals[rank]} {classes[idx]}** — {proba[idx] * 100:.0f}% likelihood")
+                if not any_shown:
+                    st.info("No close historical match at this percentage yet.")
             else:
-                rec, icon = "Diploma / Foundation Courses", "📘"
-            st.markdown(f"**{icon} Recommended:** {rec}")
+                st.info("Not enough confirmed-admission records with 12th % on file to train a model yet.")
 
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
