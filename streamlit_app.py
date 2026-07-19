@@ -303,7 +303,7 @@ _XLS_FILES = [
     (os.path.join(BASE_DIR, "20260106153152255_Admission 2023 24.xls"), "2023"),
     (os.path.join(BASE_DIR, "20260106153439552_Admission 2024 25.xls"), "2024"),
     (os.path.join(BASE_DIR, "20260106153808096_Admission 2025 26.xls"), "2025"),
-    (os.path.join(BASE_DIR, "20260106153841088_Admission 2026 27.xls"), "2026"),
+    (os.path.join(BASE_DIR, "20260717162534596_Admission 2026 27.xls"), "2026"),
 ]
 
 
