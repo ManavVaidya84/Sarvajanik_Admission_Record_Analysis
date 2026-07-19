@@ -17,7 +17,7 @@ XLS_TO_CSV = [
     ("20260106153152255_Admission 2023 24.xls", "admission_2023_24.csv"),
     ("20260106153439552_Admission 2024 25.xls", "admission_2024_25.csv"),
     ("20260106153808096_Admission 2025 26.xls", "admission_2025_26.csv"),
-    ("20260106153841088_Admission 2026 27.xls", "admission_2026_27.csv"),
+    ("20260717162534596_Admission 2026 27.xls", "admission_2026_27.csv"),
 ]
 
 print("=" * 50)
