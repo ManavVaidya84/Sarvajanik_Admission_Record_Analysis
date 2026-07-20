@@ -809,7 +809,7 @@ elif page == "🔮 Advanced Analytics":
     st.markdown('<span class="section-label">Intelligence</span>', unsafe_allow_html=True)
     st.title("Advanced Analytics")
     st.markdown('<h2>Trends, Forecasts & Recommendations</h2>', unsafe_allow_html=True)
-   # st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+    st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
     if not df.empty:
         c1, c2 = st.columns(2)
