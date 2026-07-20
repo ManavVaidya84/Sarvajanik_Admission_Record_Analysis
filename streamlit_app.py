@@ -822,22 +822,7 @@ elif page == "🔮 Advanced Analytics":
                 fig1.update_traces(line_width=3, marker_size=8, marker_color='#a78bfa')
                 wrap_chart(fig1)
 
-        with c2:
-            st.markdown("**🎯 Program Recommendation (ML Model)**")
-            marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
-
-            train_data = get_program_training_data(df)
-            if not train_data.empty:
-                st.caption(f"Model trained on {len(train_data):,} confirmed admissions (2023–2026), matched by 12th % → actual program.")
-                results = predict_program(train_data, marks)
-                medals = ["🥇", "🥈", "🥉"]
-                if results:
-                    for rank, (program, score) in enumerate(results):
-                        st.markdown(f"**{medals[rank]} {program}** — {score * 100:.0f}% likelihood")
-                else:
-                    st.info("No close historical match at this percentage yet.")
-            else:
-                st.info("Not enough confirmed-admission records with 12th % on file to train a model yet.")
+       
 
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
