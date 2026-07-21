@@ -5,6 +5,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 
+try:
+    import anthropic
+    _ANTHROPIC_AVAILABLE = True
+except ImportError:
+    _ANTHROPIC_AVAILABLE = False
+
 st.set_page_config(
     page_title="Sarvajanik University Analytics",
     layout="wide",
@@ -482,6 +488,20 @@ def compute_board_counts(df: pd.DataFrame):
 MARKS_COL = '12th/ HSC Overall / Diploma'
 
 
+def find_column(df: pd.DataFrame, keyword: str):
+    """
+    Find a column whose name contains `keyword` (case-insensitive).
+    Some question headers (e.g. the lead-source column) have slightly
+    inconsistent spacing/punctuation across yearly source files, so an
+    exact-match lookup is fragile — this matches on substring instead.
+    """
+    keyword = keyword.lower()
+    for c in df.columns:
+        if keyword in c.lower():
+            return c
+    return None
+
+
 @st.cache_data(show_spinner=False)
 def get_program_training_data(df: pd.DataFrame):
     """
@@ -519,6 +539,60 @@ def predict_program(train_data: pd.DataFrame, marks: float, k: int = 25, top_n: 
     scores = nearest.groupby('Program1')['_weight'].sum()
     scores = (scores / scores.sum()).sort_values(ascending=False)
     return list(scores.head(top_n).items())
+
+
+@st.cache_resource(show_spinner=False)
+def get_anthropic_client():
+    """
+    Build the Anthropic client from a Streamlit secret / env var.
+    Returns None if no key is configured or the SDK isn't installed —
+    callers must handle that gracefully rather than crashing the page.
+    """
+    if not _ANTHROPIC_AVAILABLE:
+        return None
+    api_key = None
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY")
+    except Exception:
+        pass
+    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    return anthropic.Anthropic(api_key=api_key)
+
+
+@st.cache_data(show_spinner=False)
+def llm_recommend_program(marks: float, neighbor_counts: tuple, model_name: str = "claude-haiku-4-5-20251001"):
+    """
+    Ask Claude to recommend a program, grounded in the SAME nearest-neighbour
+    evidence the KNN model uses (not the full dataset, and not general
+    knowledge) — so its answer is reasoning over real historical admissions
+    at this university, with a short natural-language explanation attached.
+    """
+    client = get_anthropic_client()
+    if client is None:
+        return None
+
+    context_lines = "\n".join(f"- {prog}: {cnt} students" for prog, cnt in neighbor_counts)
+    prompt = (
+        f"You are analyzing Sarvajanik University's historical confirmed-admission data.\n"
+        f"A prospective student has a 12th grade percentage of {marks}%.\n\n"
+        f"Among the historically confirmed students with the closest 12th percentage to "
+        f"this student, here is the breakdown of which programs they were admitted into:\n"
+        f"{context_lines}\n\n"
+        f"Based only on this data, recommend the single most likely program for this "
+        f"student and briefly explain your reasoning in 1-2 sentences. Respond in exactly "
+        f"this format:\nProgram: <program name>\nReasoning: <short reasoning>"
+    )
+    try:
+        resp = client.messages.create(
+            model=model_name,
+            max_tokens=150,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.content[0].text.strip()
+    except Exception as e:
+        return f"⚠️ LLM call failed: {e}"
 
 
 @st.cache_data(show_spinner=False)
@@ -572,6 +646,7 @@ with st.sidebar:
         "🗺️ Geographic Analysis",
         "👥 Gender Analysis",
         "📚 Board & Stream",
+        "📢 Source & Category",
         "🔮 Advanced Analytics",
     ]
 
@@ -805,6 +880,95 @@ elif page == "📚 Board & Stream":
             )
             wrap_chart(fig2, height=420)
 
+elif page == "📢 Source & Category":
+    st.markdown('<span class="section-label">Acquisition & Reservation</span>', unsafe_allow_html=True)
+    st.title("Lead Source & Category")
+    st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+
+    source_col = find_column(df, 'from where you get the detail')
+
+    if not df.empty and source_col:
+        st.markdown("#### 📢 Lead Source")
+        src_df = df[df[source_col].notna()].copy()
+        src_df[source_col] = src_df[source_col].astype(str).str.strip()
+
+        c1, c2 = st.columns(2)
+        with c1:
+            top_src = src_df[source_col].value_counts().head(10).reset_index()
+            top_src.columns = ['Source', 'Count']
+            fig1 = px.bar(
+                top_src, x='Count', y='Source', orientation='h', text_auto=True,
+                title="Inquiries by Lead Source",
+                color_discrete_sequence=['#60a5fa'],
+            )
+            fig1.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+            fig1.update_layout(yaxis={'categoryorder': 'total ascending'}, yaxis_title="")
+            wrap_chart(fig1, height=420)
+
+        with c2:
+            src_stats = (
+                src_df.groupby(source_col, observed=True)
+                .agg(Total=('Status', 'count'), Confirmed=('_IsConfirmed', 'sum'))
+                .reset_index()
+            )
+            src_stats = src_stats[src_stats['Total'] >= 10]  # drop tiny/noisy sources
+            src_stats['Conversion_%'] = (src_stats['Confirmed'] / src_stats['Total'] * 100).round(1)
+            src_stats = src_stats.sort_values('Conversion_%', ascending=True)
+            fig2 = px.bar(
+                src_stats, x='Conversion_%', y=source_col, orientation='h', text_auto=True,
+                title="Conversion Rate by Source (%)",
+                color_discrete_sequence=['#34d399'],
+            )
+            fig2.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+            fig2.update_layout(yaxis_title="")
+            wrap_chart(fig2, height=420)
+
+        missing = int(df[source_col].isna().sum())
+        st.caption(f"{missing:,} of {len(df):,} records don't have a lead source on file (sources with under 10 records are excluded from the conversion chart).")
+    else:
+        st.info("No lead-source column found in the current dataset.")
+
+    st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+
+    if not df.empty and 'Category' in df.columns:
+        st.markdown("#### 🏷️ Category-wise Breakdown")
+        cat_df = df[df['Category'].notna()].copy()
+
+        c3, c4 = st.columns([2, 3])
+        with c3:
+            cat_dist = cat_df['Category'].value_counts()
+            fig3 = px.pie(
+                names=cat_dist.index, values=cat_dist.values,
+                title="Category Distribution", hole=0.48,
+                color_discrete_sequence=['#60a5fa', '#a78bfa', '#fbbf24', '#f472b6', '#34d399'],
+            )
+            fig3.update_traces(
+                textfont_color='#e2e8f0', textinfo='label+percent',
+                marker_line_color='rgba(0,0,0,0.15)', marker_line_width=2,
+            )
+            wrap_chart(fig3, height=400)
+
+        with c4:
+            cat_stats = (
+                cat_df.groupby('Category', observed=True)
+                .agg(Total=('Status', 'count'), Confirmed=('_IsConfirmed', 'sum'))
+                .reset_index()
+            )
+            cat_stats['Conversion_%'] = (cat_stats['Confirmed'] / cat_stats['Total'] * 100).round(1)
+            cat_stats = cat_stats.sort_values('Conversion_%', ascending=False)
+            fig4 = px.bar(
+                cat_stats, x='Category', y='Conversion_%', text_auto=True,
+                title="Conversion Rate by Category (%)",
+                color_discrete_sequence=['#a78bfa'],
+            )
+            fig4.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+            wrap_chart(fig4, height=400)
+
+        missing_cat = int(df['Category'].isna().sum())
+        st.caption(f"{missing_cat:,} of {len(df):,} records don't have a category on file.")
+    else:
+        st.info("No category column found in the current dataset.")
+
 elif page == "🔮 Advanced Analytics":
     st.markdown('<span class="section-label">Intelligence</span>', unsafe_allow_html=True)
     st.title("Advanced Analytics")
@@ -822,7 +986,45 @@ elif page == "🔮 Advanced Analytics":
                 fig1.update_traces(line_width=3, marker_size=8, marker_color='#a78bfa')
                 wrap_chart(fig1)
 
-       
+        with c2:
+            st.markdown("**🎯 Program Recommendation (ML Model)**")
+            marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
+
+            train_data = get_program_training_data(df)
+            if not train_data.empty:
+                st.caption(f"Model trained on {len(train_data):,} confirmed admissions (2023–2026), matched by 12th % → actual program.")
+                results = predict_program(train_data, marks)
+                medals = ["🥇", "🥈", "🥉"]
+                if results:
+                    for rank, (program, score) in enumerate(results):
+                        st.markdown(f"**{medals[rank]} {program}** — {score * 100:.0f}% likelihood")
+                else:
+                    st.info("No close historical match at this percentage yet.")
+            else:
+                st.info("Not enough confirmed-admission records with 12th % on file to train a model yet.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("**🤖 Ask Claude (LLM)**")
+            if get_anthropic_client() is None:
+                st.caption(
+                    "Not configured. Add `ANTHROPIC_API_KEY` under Settings → Secrets "
+                    "on Streamlit Cloud to enable this."
+                )
+            elif not train_data.empty:
+                st.caption("Claude reasons over the same nearby historical students as the model above, and explains why.")
+                if st.button("Get Claude's recommendation"):
+                    k = min(25, len(train_data))
+                    dist = (train_data[MARKS_COL] - marks).abs().to_numpy()
+                    nearest_idx = np.argsort(dist)[:k]
+                    neighbor_counts = tuple(
+                        train_data.iloc[nearest_idx]['Program1'].value_counts().items()
+                    )
+                    with st.spinner("Asking Claude..."):
+                        answer = llm_recommend_program(marks, neighbor_counts)
+                    if answer:
+                        st.markdown(answer)
+                    else:
+                        st.info("Couldn't reach the LLM — check your API key.")
 
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
