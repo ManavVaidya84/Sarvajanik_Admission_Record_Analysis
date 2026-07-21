@@ -5,6 +5,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 
+try:
+    import anthropic
+    _ANTHROPIC_AVAILABLE = True
+except ImportError:
+    _ANTHROPIC_AVAILABLE = False
+
 st.set_page_config(
     page_title="Sarvajanik University Analytics",
     layout="wide",
@@ -65,10 +71,12 @@ st.markdown("""
     [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
     [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
     button[kind="header"]                     { display: none !important; }
+    /* The floating arrow button that Streamlit renders outside the sidebar */
     .st-emotion-cache-1egp75o,
     .st-emotion-cache-1li7dat,
     .st-emotion-cache-po3384,
     [class*="collapsedControl"]               { display: none !important; }
+    /* Catch-all for any top-left button containing a Material icon */
     body > div > div > section:first-of-type ~ div > button,
     [data-testid="stAppViewContainer"] > div > button { display: none !important; }
 
@@ -94,12 +102,14 @@ st.markdown("""
         color: #e2e8f0 !important;
         border-color: rgba(96,165,250,0.15) !important;
     }
+    /* Selected radio item */
     .stRadio > div > label[data-baseweb="radio"]:has(input:checked),
     .stRadio > div > label:has(> div > input:checked) {
         background: rgba(96,165,250,0.15) !important;
         color: #60a5fa !important;
         border-color: rgba(96,165,250,0.3) !important;
     }
+    /* Hide the radio dot itself */
     .stRadio > div > label > div:first-child { display: none !important; }
     .stRadio [data-testid="stMarkdownContainer"] p { color: inherit !important; margin: 0 !important; font-size: inherit !important; }
 
@@ -199,19 +209,24 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; height: 0 !important; }
     .stDeployButton { display: none !important; }
 
+    /* ── Nuclear hide: the keyboard_double_arrow sidebar toggle ── */
+    /* Target by every known selector variant */
     [data-testid="collapsedControl"]          { display: none !important; opacity: 0 !important; pointer-events: none !important; width: 0 !important; height: 0 !important; }
     [data-testid="stSidebarCollapsedControl"] { display: none !important; opacity: 0 !important; pointer-events: none !important; }
     button[aria-label="Close sidebar"]        { display: none !important; }
     button[aria-label="Open sidebar"]         { display: none !important; }
     button[aria-label="collapse sidebar"]     { display: none !important; }
     button[aria-label="expand sidebar"]       { display: none !important; }
+    /* The floating button Streamlit places at top-left outside the sidebar */
     .st-emotion-cache-1egp75o { display: none !important; }
     .st-emotion-cache-1li7dat  { display: none !important; }
     .st-emotion-cache-po3384   { display: none !important; }
     .st-emotion-cache-czk5ss   { display: none !important; }
     [class*="collapsedControl"] { display: none !important; }
+    /* Hide the Material icon span specifically */
     .material-symbols-rounded  { display: none !important; font-size: 0 !important; }
     span[data-testid="stIconMaterial"] { display: none !important; }
+    /* Hide the entire top-bar area that holds the button */
     [data-testid="stAppViewContainer"] > div:first-child > button { display: none !important; }
     header[data-testid="stHeader"] { display: none !important; }
 </style>
@@ -225,18 +240,22 @@ st.markdown("""
         el.style.cssText += 'display:none!important;visibility:hidden!important;width:0!important;height:0!important;opacity:0!important;pointer-events:none!important;';
     }
     function nuke() {
+        // 1. Any button containing "keyboard_double" text
         document.querySelectorAll('button').forEach(btn => {
             const txt = (btn.innerText || btn.textContent || '');
             if (txt.includes('keyboard_double') || txt.trim() === 'keyboard_double_arrow_left' || txt.trim() === 'keyboard_double_arrow_right') {
                 hide(btn);
             }
         });
+        // 2. By data-testid
         ['collapsedControl','stSidebarCollapsedControl','stHeader'].forEach(id => {
             document.querySelectorAll('[data-testid="' + id + '"]').forEach(hide);
         });
+        // 3. By aria-label
         ['Close sidebar','Open sidebar','collapse sidebar','expand sidebar'].forEach(label => {
             document.querySelectorAll('button[aria-label="' + label + '"]').forEach(hide);
         });
+        // 4. Any span whose text is the raw material icon name
         document.querySelectorAll('span').forEach(span => {
             const txt = (span.innerText || span.textContent || '').trim();
             if (txt === 'keyboard_double_arrow_left' || txt === 'keyboard_double_arrow_right' || txt.startsWith('keyboard_double')) {
@@ -253,13 +272,12 @@ st.markdown("""
 })();
 </script>
 """, unsafe_allow_html=True)
-
-# ====================== CHART THEME (cached as module-level constants) ======================
 _AXIS_STYLE = dict(
     gridcolor='rgba(255,255,255,0.05)',
     linecolor='rgba(255,255,255,0.1)',
     tickcolor='rgba(255,255,255,0.1)',
 )
+# Base layout — NO xaxis/yaxis keys so callers can pass their own without collision
 _LAYOUT_BASE = dict(
     plot_bgcolor='rgba(0,0,0,0)',
     paper_bgcolor='rgba(0,0,0,0)',
@@ -273,82 +291,30 @@ COLORS = ['#60a5fa', '#a78bfa', '#34d399', '#fbbf24', '#f472b6', '#38bdf8', '#fb
 
 
 def apply_layout(fig, height=500, xaxis_extra=None, yaxis_extra=None):
-    """Apply shared dark theme."""
+    """Apply shared dark theme. Axis overrides are deep-merged to avoid duplicate-kwarg errors."""
     xaxis = {**_AXIS_STYLE, **(xaxis_extra or {})}
     yaxis = {**_AXIS_STYLE, **(yaxis_extra or {})}
     fig.update_layout(height=height, xaxis=xaxis, yaxis=yaxis, **_LAYOUT_BASE)
 
-
-def wrap_chart(fig, height=500, xaxis_extra=None, yaxis_extra=None):
-    """Apply shared dark theme + wrap in glass div."""
-    apply_layout(fig, height=height, xaxis_extra=xaxis_extra, yaxis_extra=yaxis_extra)
-    st.markdown('<div class="chart-glass">', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ====================== OPTIMIZED DATA LOADING ======================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# CSV files (fast) — created by convert_data.py
-_CSV_FILES = [
-    (os.path.join(BASE_DIR, "data", "admission_2023_24.csv"), "2023"),
-    (os.path.join(BASE_DIR, "data", "admission_2024_25.csv"), "2024"),
-    (os.path.join(BASE_DIR, "data", "admission_2025_26.csv"), "2025"),
-    (os.path.join(BASE_DIR, "data", "admission_2026_27.csv"), "2026"),
-]
-
-# XLS files (slow fallback) — original files
-_XLS_FILES = [
-    (os.path.join(BASE_DIR, "20260106153152255_Admission 2023 24.xls"), "2023"),
-    (os.path.join(BASE_DIR, "20260106153439552_Admission 2024 25.xls"), "2024"),
-    (os.path.join(BASE_DIR, "20260106153808096_Admission 2025 26.xls"), "2025"),
-    (os.path.join(BASE_DIR, "20260106153841088_Admission 2026 27.xls"), "2026"),
-]
-
-
-@st.cache_data(show_spinner="Loading admission data…")
+# ====================== DATA LOADING ======================
+@st.cache_data(show_spinner=False)
 def load_all_data():
-    """Load data from CSV (fast) or XLS (slow fallback). Auto-saves CSV on first XLS load."""
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    files = [
+        (os.path.join(BASE_DIR, "20260106153152255_Admission 2023 24.xls"), "2023"),
+        (os.path.join(BASE_DIR, "20260106153439552_Admission 2024 25.xls"), "2024"),
+        (os.path.join(BASE_DIR, "20260106153808096_Admission 2025 26.xls"), "2025"),
+        (os.path.join(BASE_DIR, "20260106153841088_Admission 2026 27.xls"), "2026"),
+    ]
     dfs = []
-
-    # ── Try CSV first (10-50x faster than XLS) ──
-    for path, year in _CSV_FILES:
+    for path, year in files:
         if os.path.exists(path):
             try:
-                df_temp = pd.read_csv(path, low_memory=False)
+                df_temp = pd.read_excel(path, header=3, engine='xlrd')
                 df_temp['Year'] = year
                 dfs.append(df_temp)
             except Exception:
                 pass
-
-    if dfs:
-        return pd.concat(dfs, ignore_index=True)
-
-    # ── Fallback: Read XLS and auto-save as CSV for next time ──
-    data_dir = os.path.join(BASE_DIR, "data")
-    os.makedirs(data_dir, exist_ok=True)
-    csv_names = [
-        "admission_2023_24.csv",
-        "admission_2024_25.csv",
-        "admission_2025_26.csv",
-        "admission_2026_27.csv",
-    ]
-
-    for (xls_path, year), csv_name in zip(_XLS_FILES, csv_names):
-        if os.path.exists(xls_path):
-            try:
-                df_temp = pd.read_excel(xls_path, header=3, engine='xlrd')
-                df_temp['Year'] = year
-                dfs.append(df_temp)
-                # Auto-save CSV so next load is instant
-                try:
-                    df_temp.to_csv(os.path.join(data_dir, csv_name), index=False)
-                except Exception:
-                    pass
-            except Exception:
-                pass
-
     if not dfs:
         return pd.DataFrame()
     return pd.concat(dfs, ignore_index=True)
@@ -389,13 +355,13 @@ def compute_kpis(df: pd.DataFrame):
     if df.empty:
         return 0, 0, 0
     total = len(df)
-    submitted = int(df['Status'].str.contains('Submitted|Submit', na=False, case=False).sum()) if 'Status' in df.columns else 0
-    confirmed = _get_confirmed_count(df)
-    return total, submitted, confirmed
+    submitted = df['Status'].str.contains('Submitted|Submit', na=False, case=False).sum() if 'Status' in df.columns else 0
+    confirmed = get_confirmed_count(df)
+    return total, int(submitted), int(confirmed)
 
 
 @st.cache_data(show_spinner=False)
-def _get_confirmed_count(df: pd.DataFrame) -> int:
+def get_confirmed_count(df: pd.DataFrame) -> int:
     if df.empty:
         return 0
     if '_IsConfirmed' in df.columns:
@@ -409,77 +375,21 @@ def _get_confirmed_count(df: pd.DataFrame) -> int:
     return 0
 
 
-# ── Cached chart-data helpers (avoid recomputing on every rerun) ──
-
-@st.cache_data(show_spinner=False)
-def get_top_programs(df: pd.DataFrame, n: int = 10):
-    if df.empty or 'Program1' not in df.columns:
-        return pd.Series(dtype='int64')
-    return df['Program1'].value_counts().head(n)
-
-
-@st.cache_data(show_spinner=False)
-def get_city_counts(df: pd.DataFrame, n: int = 15):
-    if df.empty or 'City' not in df.columns:
-        return pd.DataFrame(columns=['City', 'Count']), 0, 0
-    city_count = df['City'].value_counts().head(n).reset_index()
-    city_count.columns = ['City', 'Count']
-    surat = int((df['City'] == 'Surat').sum())
-    other = len(df) - surat
-    return city_count, surat, other
-
-
-@st.cache_data(show_spinner=False)
-def get_gender_program_data(df: pd.DataFrame, top_n: int = 8):
-    if df.empty or 'Gender' not in df.columns or 'Program1' not in df.columns:
-        return pd.Series(dtype='int64'), pd.DataFrame(), pd.DataFrame()
-    gender_dist = df['Gender'].value_counts()
-    top_progs = df['Program1'].value_counts().head(top_n).index
-    gp = (df[df['Program1'].isin(top_progs)]
-          .groupby(['Gender', 'Program1'], observed=True)
-          .size().reset_index(name='Count'))
-    gender_stats = (
-        df.groupby('Gender', observed=True)
-        .agg(
-            Total=('Status', 'count'),
-            Submitted=('Status', lambda x: x.str.contains('Submitted|Submit', na=False, case=False).sum()),
-            Confirmed=('_IsConfirmed', 'sum')
-        )
-        .reset_index()
-    )
-    gender_stats['Conversion_%'] = (gender_stats['Confirmed'] / gender_stats['Total'] * 100).round(1).fillna(0)
-    return gender_dist, gp, gender_stats
-
-
-@st.cache_data(show_spinner=False)
-def compute_board_counts(df: pd.DataFrame):
-    """Robust board detection — checks each column individually, no row-joining."""
-    if df.empty:
-        return pd.DataFrame(columns=['Board', 'Count'])
-
-    str_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    gseb_mask = pd.Series(False, index=df.index)
-    cbse_mask = pd.Series(False, index=df.index)
-    icse_mask = pd.Series(False, index=df.index)
-    for col in str_cols:
-        col_upper = df[col].astype(str).str.upper()
-        gseb_mask = gseb_mask | col_upper.str.contains('GSEB', na=False)
-        cbse_mask = cbse_mask | col_upper.str.contains('CBSE', na=False)
-        icse_mask = icse_mask | col_upper.str.contains('ICSE', na=False)
-
-    gseb = int(gseb_mask.sum())
-    cbse = int(cbse_mask.sum())
-    icse = int(icse_mask.sum())
-    other = max(0, len(df) - gseb - cbse - icse)
-
-    board_df = pd.DataFrame({
-        'Board': ['GSEB', 'CBSE', 'ICSE', 'Other'],
-        'Count': [gseb, cbse, icse, other],
-    })
-    return board_df[board_df['Count'] > 0].reset_index(drop=True)
-
-
 MARKS_COL = '12th/ HSC Overall / Diploma'
+
+
+def find_column(df: pd.DataFrame, keyword: str):
+    """
+    Find a column whose name contains `keyword` (case-insensitive).
+    Some question headers (e.g. the lead-source column) have slightly
+    inconsistent spacing/punctuation across yearly source files, so an
+    exact-match lookup is fragile — this matches on substring instead.
+    """
+    keyword = keyword.lower()
+    for c in df.columns:
+        if keyword in c.lower():
+            return c
+    return None
 
 
 @st.cache_data(show_spinner=False)
@@ -493,6 +403,7 @@ def get_program_training_data(df: pd.DataFrame):
     if df.empty or MARKS_COL not in df.columns or 'Program1' not in df.columns or '_IsConfirmed' not in df.columns:
         return pd.DataFrame(columns=[MARKS_COL, 'Program1'])
     data = df.loc[df['_IsConfirmed'], [MARKS_COL, 'Program1']].dropna()
+    # Drop bad data entries (some rows have percentages > 100)
     data = data[(data[MARKS_COL] >= 0) & (data[MARKS_COL] <= 100)]
     counts = data['Program1'].value_counts()
     valid_programs = counts[counts >= 15].index
@@ -515,31 +426,83 @@ def predict_program(train_data: pd.DataFrame, marks: float, k: int = 25, top_n: 
     dist = (train_data[MARKS_COL] - marks).abs().to_numpy()
     nearest_idx = np.argsort(dist)[:k]
     nearest = train_data.iloc[nearest_idx].copy()
-    nearest['_weight'] = 1.0 / (dist[nearest_idx] + 0.5)
+    nearest['_weight'] = 1.0 / (dist[nearest_idx] + 0.5)  # +0.5 avoids divide-by-zero on exact matches
     scores = nearest.groupby('Program1')['_weight'].sum()
     scores = (scores / scores.sum()).sort_values(ascending=False)
     return list(scores.head(top_n).items())
 
 
+@st.cache_resource(show_spinner=False)
+def get_anthropic_client():
+    """
+    Build the Anthropic client from a Streamlit secret / env var.
+    Returns None if no key is configured or the SDK isn't installed —
+    callers must handle that gracefully rather than crashing the page.
+    """
+    if not _ANTHROPIC_AVAILABLE:
+        return None
+    api_key = None
+    try:
+        api_key = st.secrets.get("ANTHROPIC_API_KEY")
+    except Exception:
+        pass
+    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    return anthropic.Anthropic(api_key=api_key)
+
+
 @st.cache_data(show_spinner=False)
-def get_yearly_conversion(df: pd.DataFrame):
-    if df.empty or 'Year' not in df.columns or 'Status' not in df.columns:
-        return pd.DataFrame()
-    yearly = (
-        df.groupby('Year')
-        .agg(
-            Total=('Status', 'count'),
-            Confirmed=('_IsConfirmed', 'sum')
-        )
-        .reset_index()
+def llm_recommend_program(marks: float, neighbor_counts: tuple, model_name: str = "claude-haiku-4-5-20251001"):
+    """
+    Ask Claude to recommend a program, grounded in the SAME nearest-neighbour
+    evidence the KNN model uses (not the full dataset, and not general
+    knowledge) — so its answer is reasoning over real historical admissions
+    at this university, with a short natural-language explanation attached.
+
+    neighbor_counts: tuple of (program_name, count) pairs, most-common first,
+    from the k historical confirmed admissions closest to `marks`. Passed as
+    a tuple (not a DataFrame) so st.cache_data can hash it as a cache key —
+    repeated calls with the same marks won't re-hit the API.
+    """
+    client = get_anthropic_client()
+    if client is None:
+        return None
+
+    context_lines = "\n".join(f"- {prog}: {cnt} students" for prog, cnt in neighbor_counts)
+    prompt = (
+        f"You are analyzing Sarvajanik University's historical confirmed-admission data.\n"
+        f"A prospective student has a 12th grade percentage of {marks}%.\n\n"
+        f"Among the historically confirmed students with the closest 12th percentage to "
+        f"this student, here is the breakdown of which programs they were admitted into:\n"
+        f"{context_lines}\n\n"
+        f"Based only on this data, recommend the single most likely program for this "
+        f"student and briefly explain your reasoning in 1-2 sentences. Respond in exactly "
+        f"this format:\nProgram: <program name>\nReasoning: <short reasoning>"
     )
-    yearly['Conversion_%'] = (yearly['Confirmed'] / yearly['Total'] * 100).round(1)
-    return yearly
+    try:
+        resp = client.messages.create(
+            model=model_name,
+            max_tokens=150,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return resp.content[0].text.strip()
+    except Exception as e:
+        return f"⚠️ LLM call failed: {e}"
+
+
+def wrap_chart(fig, height=500, xaxis_extra=None, yaxis_extra=None):
+    """Apply shared dark theme + wrap in glass div."""
+    apply_layout(fig, height=height, xaxis_extra=xaxis_extra, yaxis_extra=yaxis_extra)
+    st.markdown('<div class="chart-glass">', unsafe_allow_html=True)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ====================== LOAD & CLEAN ======================
-raw_df = load_all_data()
-df = clean_data(raw_df)
+with st.spinner("Loading data…"):
+    raw_df = load_all_data()
+    df = clean_data(raw_df)
 
 # ====================== SIDEBAR ======================
 with st.sidebar:
@@ -572,6 +535,7 @@ with st.sidebar:
         "🗺️ Geographic Analysis",
         "👥 Gender Analysis",
         "📚 Board & Stream",
+        "📢 Source & Category",
         "🔮 Advanced Analytics",
     ]
 
@@ -580,6 +544,12 @@ with st.sidebar:
         st.session_state["page"] = NAV_ITEMS[0]
 
     for item in NAV_ITEMS:
+        is_active = st.session_state["page"] == item
+        active_style = (
+            "background:rgba(96,165,250,0.15);color:#60a5fa;border:1px solid rgba(96,165,250,0.3);"
+            if is_active else
+            "background:transparent;color:#94a3b8;border:1px solid transparent;"
+        )
         if st.button(
             item,
             key=f"nav_{item}",
@@ -589,10 +559,11 @@ with st.sidebar:
             st.session_state["page"] = item
             st.rerun()
 
-    # Build active-item highlight CSS
+    # Build active-item highlight CSS (targets the nth button in sidebar)
     active_idx = NAV_ITEMS.index(st.session_state["page"])
     active_css = f"""
     <style>
+        /* Base nav button style */
         [data-testid="stSidebar"] .stButton > button {{
             background: transparent !important;
             border: 1px solid transparent !important;
@@ -616,6 +587,7 @@ with st.sidebar:
             box-shadow: none !important;
             outline: none !important;
         }}
+        /* Active item highlight */
         [data-testid="stSidebar"] .stButton:nth-of-type({active_idx + 1}) > button {{
             background: rgba(96,165,250,0.15) !important;
             color: #60a5fa !important;
@@ -638,7 +610,7 @@ with st.sidebar:
 
 page = st.session_state.get("page", NAV_ITEMS[0])
 
-# ====================== PAGES (lazy — only compute what's needed) ======================
+# ====================== PAGES ======================
 
 if page == "🏠 Home Overview":
     st.markdown('<span class="section-label">Dashboard</span>', unsafe_allow_html=True)
@@ -650,12 +622,13 @@ if page == "🏠 Home Overview":
     conv = round(confirmed / total * 100, 1) if total > 0 else 0
 
     c1, c2, c3, c4 = st.columns(4)
-    for col, cls, label, value, sub in [
+    cards = [
         (c1, "card-blue",   "Total Inquiries",       f"{total:,}",     "All-time records"),
         (c2, "card-green",  "Submitted",             f"{submitted:,}", "Applications filed"),
         (c3, "card-amber",  "Confirmed Admissions",  f"{confirmed:,}", "Seat confirmed"),
         (c4, "card-violet", "Conversion Rate",       f"{conv}%",       "Inquiry → Admit"),
-    ]:
+    ]
+    for col, cls, label, value, sub in cards:
         with col:
             st.markdown(f"""
             <div class="glass-card {cls}">
@@ -666,8 +639,8 @@ if page == "🏠 Home Overview":
 
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    top10 = get_top_programs(df, 10)
-    if not top10.empty:
+    if not df.empty and 'Program1' in df.columns:
+        top10 = df['Program1'].value_counts().head(10)
         fig = px.bar(top10, text_auto=True, title="Top 10 Most Applied Programs",
                      color_discrete_sequence=COLORS)
         fig.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
@@ -691,6 +664,7 @@ elif page == "📈 Inquiry Funnel":
         fig.update_layout(title="Admission Conversion Funnel")
         wrap_chart(fig, height=550)
 
+        # Mini KPI row
         rate_sub = round(submitted / total * 100, 1) if total else 0
         rate_con = round(confirmed / total * 100, 1) if total else 0
         c1, c2, c3 = st.columns(3)
@@ -707,11 +681,10 @@ elif page == "🏆 Program Popularity":
     st.title("Program Popularity")
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    top15 = get_top_programs(df, 15)
-    if not top15.empty:
-        top15_df = top15.reset_index()
-        top15_df.columns = ['Program', 'Count']
-        fig = px.bar(top15_df, x='Count', y='Program', orientation='h',
+    if not df.empty and 'Program1' in df.columns:
+        top15 = df['Program1'].value_counts().head(15).reset_index()
+        top15.columns = ['Program', 'Count']
+        fig = px.bar(top15, x='Count', y='Program', orientation='h',
                      text_auto=True, title="Top 15 Programs by Demand",
                      color='Count', color_continuous_scale='Blues')
         fig.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
@@ -723,15 +696,18 @@ elif page == "🗺️ Geographic Analysis":
     st.markdown('<h2>Surat & South Gujarat focus</h2>', unsafe_allow_html=True)
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    city_count, surat_count, other_count = get_city_counts(df, 15)
-    if not city_count.empty:
+    if not df.empty and 'City' in df.columns:
         c1, c2 = st.columns([3, 2])
         with c1:
+            city_count = df['City'].value_counts().head(15).reset_index()
+            city_count.columns = ['City', 'Count']
             fig1 = px.bar(city_count, x='Count', y='City', orientation='h',
                           text_auto=True, title="Top 15 Cities by Inquiries",
                           color='Count', color_continuous_scale='Blues')
             wrap_chart(fig1, height=480, yaxis_extra={'categoryorder': 'total ascending'})
         with c2:
+            surat_count = (df['City'] == 'Surat').sum()
+            other_count = len(df) - surat_count
             fig2 = px.pie(
                 values=[surat_count, other_count],
                 names=['Surat', 'Other Regions'],
@@ -746,29 +722,41 @@ elif page == "👥 Gender Analysis":
     st.title("Gender Analysis")
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    gender_dist, gp, gender_stats = get_gender_program_data(df)
-    if not gender_dist.empty:
+    if not df.empty and 'Gender' in df.columns and 'Program1' in df.columns:
         c1, c2 = st.columns([2, 3])
         with c1:
+            gender_dist = df['Gender'].value_counts()
             fig1 = px.pie(names=gender_dist.index, values=gender_dist.values,
                           title="Gender Distribution", hole=0.5,
                           color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
             fig1.update_traces(textfont_color='#e2e8f0', marker_line_color='rgba(0,0,0,0)')
             wrap_chart(fig1, height=380)
         with c2:
-            if not gp.empty:
-                fig2 = px.bar(gp, x='Program1', y='Count', color='Gender',
-                              title="Program Preference by Gender", barmode='group',
-                              color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
-                wrap_chart(fig2, height=380, xaxis_extra={'tickangle': -30})
+            top_progs = df['Program1'].value_counts().head(8).index
+            gp = (df[df['Program1'].isin(top_progs)]
+                  .groupby(['Gender', 'Program1'], observed=True)
+                  .size().reset_index(name='Count'))
+            fig2 = px.bar(gp, x='Program1', y='Count', color='Gender',
+                          title="Program Preference by Gender", barmode='group',
+                          color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
+            wrap_chart(fig2, height=380, xaxis_extra={'tickangle': -30})
 
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
-        if not gender_stats.empty:
-            fig3 = px.bar(gender_stats, x='Gender', y='Conversion_%', text_auto=True,
-                          title="Conversion Rate by Gender (%)",
-                          color_discrete_sequence=['#a78bfa'])
-            fig3.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
-            wrap_chart(fig3)
+        gender_stats = (
+            df.groupby('Gender', observed=True)
+            .agg(
+                Total=('Status', 'count'),
+                Submitted=('Status', lambda x: x.str.contains('Submitted|Submit', na=False, case=False).sum()),
+                Confirmed=('_IsConfirmed', 'sum')
+            )
+            .reset_index()
+        )
+        gender_stats['Conversion_%'] = (gender_stats['Confirmed'] / gender_stats['Total'] * 100).round(1).fillna(0)
+        fig3 = px.bar(gender_stats, x='Gender', y='Conversion_%', text_auto=True,
+                      title="Conversion Rate by Gender (%)",
+                      color_discrete_sequence=['#a78bfa'])
+        fig3.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+        wrap_chart(fig3)
 
 elif page == "📚 Board & Stream":
     st.markdown('<span class="section-label">Academic Background</span>', unsafe_allow_html=True)
@@ -776,8 +764,29 @@ elif page == "📚 Board & Stream":
     st.markdown('<h2>GSEB · CBSE · ICSE &nbsp;·&nbsp; Science · Commerce · Arts</h2>', unsafe_allow_html=True)
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    board_df = compute_board_counts(df)
-    if not board_df.empty:
+    if not df.empty:
+        # Board detection — check each text column individually (no row-joining needed)
+        str_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+        gseb_mask = pd.Series(False, index=df.index)
+        cbse_mask = pd.Series(False, index=df.index)
+        icse_mask = pd.Series(False, index=df.index)
+        for col in str_cols:
+            col_upper = df[col].astype(str).str.upper()
+            gseb_mask = gseb_mask | col_upper.str.contains('GSEB', na=False)
+            cbse_mask = cbse_mask | col_upper.str.contains('CBSE', na=False)
+            icse_mask = icse_mask | col_upper.str.contains('ICSE', na=False)
+        gseb_count = int(gseb_mask.sum())
+        cbse_count = int(cbse_mask.sum())
+        icse_count = int(icse_mask.sum())
+        other_count = max(0, len(df) - gseb_count - cbse_count - icse_count)
+
+        board_df = pd.DataFrame({
+            'Board':  ['GSEB', 'CBSE', 'ICSE', 'Other'],
+            'Count':  [gseb_count, cbse_count, icse_count, other_count],
+        })
+        # Drop boards with 0 students
+        board_df = board_df[board_df['Count'] > 0].reset_index(drop=True)
+
         c1, c2 = st.columns(2)
         with c1:
             fig1 = px.bar(
@@ -805,6 +814,97 @@ elif page == "📚 Board & Stream":
             )
             wrap_chart(fig2, height=420)
 
+        # ── end of Board & Stream page ──
+
+elif page == "📢 Source & Category":
+    st.markdown('<span class="section-label">Acquisition & Reservation</span>', unsafe_allow_html=True)
+    st.title("Lead Source & Category")
+    st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+
+    source_col = find_column(df, 'from where you get the detail')
+
+    if not df.empty and source_col:
+        st.markdown("#### 📢 Lead Source")
+        src_df = df[df[source_col].notna()].copy()
+        src_df[source_col] = src_df[source_col].astype(str).str.strip()
+
+        c1, c2 = st.columns(2)
+        with c1:
+            top_src = src_df[source_col].value_counts().head(10).reset_index()
+            top_src.columns = ['Source', 'Count']
+            fig1 = px.bar(
+                top_src, x='Count', y='Source', orientation='h', text_auto=True,
+                title="Inquiries by Lead Source",
+                color_discrete_sequence=['#60a5fa'],
+            )
+            fig1.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+            fig1.update_layout(yaxis={'categoryorder': 'total ascending'}, yaxis_title="")
+            wrap_chart(fig1, height=420)
+
+        with c2:
+            src_stats = (
+                src_df.groupby(source_col, observed=True)
+                .agg(Total=('Status', 'count'), Confirmed=('_IsConfirmed', 'sum'))
+                .reset_index()
+            )
+            src_stats = src_stats[src_stats['Total'] >= 10]  # drop tiny/noisy sources
+            src_stats['Conversion_%'] = (src_stats['Confirmed'] / src_stats['Total'] * 100).round(1)
+            src_stats = src_stats.sort_values('Conversion_%', ascending=True)
+            fig2 = px.bar(
+                src_stats, x='Conversion_%', y=source_col, orientation='h', text_auto=True,
+                title="Conversion Rate by Source (%)",
+                color_discrete_sequence=['#34d399'],
+            )
+            fig2.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+            fig2.update_layout(yaxis_title="")
+            wrap_chart(fig2, height=420)
+
+        missing = int(df[source_col].isna().sum())
+        st.caption(f"{missing:,} of {len(df):,} records don't have a lead source on file (sources with under 10 records are excluded from the conversion chart).")
+    else:
+        st.info("No lead-source column found in the current dataset.")
+
+    st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+
+    if not df.empty and 'Category' in df.columns:
+        st.markdown("#### 🏷️ Category-wise Breakdown")
+        cat_df = df[df['Category'].notna()].copy()
+
+        c3, c4 = st.columns([2, 3])
+        with c3:
+            cat_dist = cat_df['Category'].value_counts()
+            fig3 = px.pie(
+                names=cat_dist.index, values=cat_dist.values,
+                title="Category Distribution", hole=0.48,
+                color_discrete_sequence=['#60a5fa', '#a78bfa', '#fbbf24', '#f472b6', '#34d399'],
+            )
+            fig3.update_traces(
+                textfont_color='#e2e8f0', textinfo='label+percent',
+                marker_line_color='rgba(0,0,0,0.15)', marker_line_width=2,
+            )
+            wrap_chart(fig3, height=400)
+
+        with c4:
+            cat_stats = (
+                cat_df.groupby('Category', observed=True)
+                .agg(Total=('Status', 'count'), Confirmed=('_IsConfirmed', 'sum'))
+                .reset_index()
+            )
+            cat_stats['Conversion_%'] = (cat_stats['Confirmed'] / cat_stats['Total'] * 100).round(1)
+            cat_stats = cat_stats.sort_values('Conversion_%', ascending=False)
+            fig4 = px.bar(
+                cat_stats, x='Category', y='Conversion_%', text_auto=True,
+                title="Conversion Rate by Category (%)",
+                color_discrete_sequence=['#a78bfa'],
+            )
+            fig4.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+            wrap_chart(fig4, height=400)
+
+        missing_cat = int(df['Category'].isna().sum())
+        st.caption(f"{missing_cat:,} of {len(df):,} records don't have a category on file.")
+    else:
+        st.info("No category column found in the current dataset.")
+
 elif page == "🔮 Advanced Analytics":
     st.markdown('<span class="section-label">Intelligence</span>', unsafe_allow_html=True)
     st.title("Advanced Analytics")
@@ -814,15 +914,62 @@ elif page == "🔮 Advanced Analytics":
     if not df.empty:
         c1, c2 = st.columns(2)
         with c1:
-            yearly = get_yearly_conversion(df)
-            if not yearly.empty:
+            if 'Year' in df.columns and 'Status' in df.columns:
+                yearly = (
+                    df.groupby('Year')
+                    .agg(
+                        Total=('Status', 'count'),
+                        Confirmed=('_IsConfirmed', 'sum')
+                    )
+                    .reset_index()
+                )
+                yearly['Conversion_%'] = (yearly['Confirmed'] / yearly['Total'] * 100).round(1)
                 fig1 = px.line(yearly, x='Year', y='Conversion_%', markers=True,
                                title="Year-wise Conversion Rate Trend",
                                color_discrete_sequence=['#60a5fa'])
                 fig1.update_traces(line_width=3, marker_size=8, marker_color='#a78bfa')
                 wrap_chart(fig1)
 
-       
+        with c2:
+            st.markdown("**🎯 Program Recommendation (ML Model)**")
+            marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
+
+            train_data = get_program_training_data(df)
+            if not train_data.empty:
+                st.caption(f"Model trained on {len(train_data):,} confirmed admissions (2023–2026), matched by 12th % → actual program.")
+                results = predict_program(train_data, marks)
+                medals = ["🥇", "🥈", "🥉"]
+                if results:
+                    for rank, (program, score) in enumerate(results):
+                        st.markdown(f"**{medals[rank]} {program}** — {score * 100:.0f}% likelihood")
+                else:
+                    st.info("No close historical match at this percentage yet.")
+            else:
+                st.info("Not enough confirmed-admission records with 12th % on file to train a model yet.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("**🤖 Ask Claude (LLM)**")
+            if get_anthropic_client() is None:
+                st.caption(
+                    "Not configured. Add `ANTHROPIC_API_KEY` under Settings → Secrets "
+                    "on Streamlit Cloud to enable this."
+                )
+            elif not train_data.empty:
+                st.caption("Claude reasons over the same nearby historical students as the model above, and explains why.")
+                if st.button("Get Claude's recommendation"):
+                    k = min(25, len(train_data))
+                    dist = (train_data[MARKS_COL] - marks).abs().to_numpy()
+                    nearest_idx = np.argsort(dist)[:k]
+                    neighbor_counts = tuple(
+                        train_data.iloc[nearest_idx]['Program1'].value_counts().items()
+                    )
+                    with st.spinner("Asking Claude..."):
+                        answer = llm_recommend_program(marks, neighbor_counts)
+                    if answer:
+                        st.markdown(answer)
+                    else:
+                        st.info("Couldn't reach the LLM — check your API key.")
+
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
         total, _, confirmed = compute_kpis(df)
