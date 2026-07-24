@@ -692,8 +692,18 @@ elif page == "🏆 Program Popularity":
 
 elif page == "🗺️ Geographic Analysis":
     st.markdown('<span class="section-label">Geography</span>', unsafe_allow_html=True)
-    st.title("Geographic Analysis")
-    st.markdown('<h2>Surat & South Gujarat focus</h2>', unsafe_allow_html=True)
+    header_col, kpi_col = st.columns([3, 1])
+    with header_col:
+        st.title("Geographic Analysis")
+        st.markdown('<h2>Surat & South Gujarat focus</h2>', unsafe_allow_html=True)
+    with kpi_col:
+        geo_total, _, _ = compute_kpis(df)
+        st.markdown(f"""
+        <div class="glass-card card-blue">
+            <div class="card-label">Total Inquiries</div>
+            <div class="card-value">{geo_total:,}</div>
+            <div class="card-sub">All-time records</div>
+        </div>""", unsafe_allow_html=True)
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
     if not df.empty and 'City' in df.columns:
