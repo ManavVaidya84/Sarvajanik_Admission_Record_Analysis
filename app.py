@@ -963,7 +963,7 @@ elif page == "🔮 Advanced Analytics":
                 st.caption(
                     "Not configured. Add `ANTHROPIC_API_KEY` under Settings → Secrets "
                     "on Streamlit Cloud to enable this."
-                )'''
+                )
             elif not train_data.empty:
                 st.caption("Claude reasons over the same nearby historical students as the model above, and explains why.")
                 if st.button("Get Claude's recommendation"):
@@ -978,7 +978,7 @@ elif page == "🔮 Advanced Analytics":
                     if answer:
                         st.markdown(answer)
                     else:
-                        st.info("Couldn't reach the LLM — check your API key.")
+                        st.info("Couldn't reach the LLM — check your API key.")'''
 
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
