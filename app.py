@@ -949,7 +949,7 @@ elif page == "🔮 Advanced Analytics":
         with c4: st.metric("Total Records", f"{total:,}")
         with c5: st.metric("Confirmed Admissions", f"{confirmed:,}")
 
-        st.info("**Roadmap** · ML-based admission forecasting · AI chatbot for student queries · Personalised program recommendation engine")
+       
 
 # ====================== FOOTER ======================
 st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
