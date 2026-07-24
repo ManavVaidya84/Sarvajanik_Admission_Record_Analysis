@@ -940,7 +940,7 @@ elif page == "🔮 Advanced Analytics":
                 fig1.update_traces(line_width=3, marker_size=8, marker_color='#a78bfa')
                 wrap_chart(fig1)
 
-        with c2:
+       ''' with c2:
             st.markdown("**🎯 Program Recommendation (ML Model)**")
             marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
 
@@ -963,7 +963,7 @@ elif page == "🔮 Advanced Analytics":
                 st.caption(
                     "Not configured. Add `ANTHROPIC_API_KEY` under Settings → Secrets "
                     "on Streamlit Cloud to enable this."
-                )
+                )'''
             elif not train_data.empty:
                 st.caption("Claude reasons over the same nearby historical students as the model above, and explains why.")
                 if st.button("Get Claude's recommendation"):
