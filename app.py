@@ -940,8 +940,8 @@ elif page == "🔮 Advanced Analytics":
                 fig1.update_traces(line_width=3, marker_size=8, marker_color='#a78bfa')
                 wrap_chart(fig1)
 
-       ''' with c2:
-            st.markdown("**🎯 Program Recommendation (ML Model)**")
+        with c2:
+           ''' st.markdown("**🎯 Program Recommendation (ML Model)**")
             marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
 
             train_data = get_program_training_data(df)
