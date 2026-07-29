@@ -943,7 +943,7 @@ elif page == "🔮 Advanced Analytics":
                 fig1.update_traces(line_width=3, marker_size=8, marker_color='#a78bfa')
                 wrap_chart(fig1)
 
-        with c2:
+        
 
         total, _, confirmed = compute_kpis(df)
         occ_rate = round(confirmed / max(total, 1) * 100, 1)
