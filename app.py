@@ -957,3 +957,4 @@ elif page == "🔮 Advanced Analytics":
 # ====================== FOOTER ======================
 st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 st.success("✅ Dashboard loaded successfully")
+
