@@ -566,19 +566,7 @@ MARKS_COL = '12th/ HSC Overall / Diploma'
 
 
 def find_column(df: pd.DataFrame, keyword: str):
-    """
-    Find a column whose name contains `keyword` (case-insensitive).
-    Some question headers (e.g. the lead-source column) have slightly
-    inconsistent spacing/punctuation across yearly source files, so an
-    exact-match lookup is fragile — this matches on substring instead.
-    """
-    keyword = keyword.lower()
-    for c in df.columns:
-        if keyword in c.lower():
-            return c
-    return None
-
-
+    
 @st.cache_data(show_spinner=False)
 def get_program_training_data(df: pd.DataFrame):
 
