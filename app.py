@@ -581,12 +581,7 @@ def find_column(df: pd.DataFrame, keyword: str):
 
 @st.cache_data(show_spinner=False)
 def get_program_training_data(df: pd.DataFrame):
-    """
-    Confirmed admissions with a valid 12th % and a known program, restricted
-    to programs with enough historical volume (>=15 confirmed cases) to be a
-    meaningful signal rather than a one-off fluke. This is the training set
-    for the distance-weighted nearest-neighbour model below.
-    """
+
     if df.empty or MARKS_COL not in df.columns or 'Program1' not in df.columns or '_IsConfirmed' not in df.columns:
         return pd.DataFrame(columns=[MARKS_COL, 'Program1'])
     data = df.loc[df['_IsConfirmed'], [MARKS_COL, 'Program1']].dropna()
