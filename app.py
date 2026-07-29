@@ -71,12 +71,10 @@ st.markdown("""
     [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
     [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
     button[kind="header"]                     { display: none !important; }
-    /* The floating arrow button that Streamlit renders outside the sidebar */
     .st-emotion-cache-1egp75o,
     .st-emotion-cache-1li7dat,
     .st-emotion-cache-po3384,
     [class*="collapsedControl"]               { display: none !important; }
-    /* Catch-all for any top-left button containing a Material icon */
     body > div > div > section:first-of-type ~ div > button,
     [data-testid="stAppViewContainer"] > div > button { display: none !important; }
 
@@ -102,14 +100,12 @@ st.markdown("""
         color: #e2e8f0 !important;
         border-color: rgba(96,165,250,0.15) !important;
     }
-    /* Selected radio item */
     .stRadio > div > label[data-baseweb="radio"]:has(input:checked),
     .stRadio > div > label:has(> div > input:checked) {
         background: rgba(96,165,250,0.15) !important;
         color: #60a5fa !important;
         border-color: rgba(96,165,250,0.3) !important;
     }
-    /* Hide the radio dot itself */
     .stRadio > div > label > div:first-child { display: none !important; }
     .stRadio [data-testid="stMarkdownContainer"] p { color: inherit !important; margin: 0 !important; font-size: inherit !important; }
 
@@ -209,26 +205,93 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; height: 0 !important; }
     .stDeployButton { display: none !important; }
 
-    /* ── Nuclear hide: the keyboard_double_arrow sidebar toggle ── */
-    /* Target by every known selector variant */
     [data-testid="collapsedControl"]          { display: none !important; opacity: 0 !important; pointer-events: none !important; width: 0 !important; height: 0 !important; }
     [data-testid="stSidebarCollapsedControl"] { display: none !important; opacity: 0 !important; pointer-events: none !important; }
     button[aria-label="Close sidebar"]        { display: none !important; }
     button[aria-label="Open sidebar"]         { display: none !important; }
     button[aria-label="collapse sidebar"]     { display: none !important; }
     button[aria-label="expand sidebar"]       { display: none !important; }
-    /* The floating button Streamlit places at top-left outside the sidebar */
     .st-emotion-cache-1egp75o { display: none !important; }
     .st-emotion-cache-1li7dat  { display: none !important; }
     .st-emotion-cache-po3384   { display: none !important; }
     .st-emotion-cache-czk5ss   { display: none !important; }
     [class*="collapsedControl"] { display: none !important; }
-    /* Hide the Material icon span specifically */
     .material-symbols-rounded  { display: none !important; font-size: 0 !important; }
     span[data-testid="stIconMaterial"] { display: none !important; }
-    /* Hide the entire top-bar area that holds the button */
-    [data-testid="stAppViewContainer"] > div:first-child > button { display: none !important; }
-    header[data-testid="stHeader"] { display: none !important; }
+    /* ── Flyout Submenu for Year Wise Breakdown ──
+       The nav button itself is the only visible box (styled identically to
+       every other nav item). This wrapper just anchors the hidden submenu
+       and reveals it on hover, with no extra visible box or arrow. */
+    .year-menu-wrapper {
+        position: relative;
+        height: 0;
+        overflow: visible;
+    }
+    .year-menu-l1 {
+        display: none;
+        position: absolute;
+        top: -46px;
+        left: calc(100% + 4px);
+        width: 190px;
+        background: #09152b;
+        border: 1px solid rgba(96,165,250,0.3);
+        border-radius: 14px;
+        padding: 6px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+        z-index: 99999;
+    }
+    [data-testid="stSidebar"] .stButton:last-of-type:hover + .element-container .year-menu-l1,
+    .year-menu-l1:hover {
+        display: block;
+    }
+    .year-item-l1 {
+        position: relative;
+        padding: 8px 12px;
+        border-radius: 8px;
+        color: #cbd5e1;
+        font-size: 0.84rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.15s ease;
+    }
+    .year-item-l1:hover {
+        background: rgba(96,165,250,0.2);
+        color: #60a5fa;
+    }
+    .year-menu-l2 {
+        display: none;
+        position: absolute;
+        top: -4px;
+        left: calc(100% + 4px);
+        width: 200px;
+        background: #0b1a36;
+        border: 1px solid rgba(96,165,250,0.3);
+        border-radius: 14px;
+        padding: 6px;
+        box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+        z-index: 100000;
+    }
+    .year-item-l1:hover .year-menu-l2 {
+        display: block;
+    }
+    .metric-item-l2 {
+        padding: 8px 10px;
+        border-radius: 8px;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        text-decoration: none !important;
+        display: block;
+        transition: all 0.15s ease;
+    }
+    .metric-item-l2:hover {
+        background: rgba(96,165,250,0.25);
+        color: #38bdf8 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -240,22 +303,18 @@ st.markdown("""
         el.style.cssText += 'display:none!important;visibility:hidden!important;width:0!important;height:0!important;opacity:0!important;pointer-events:none!important;';
     }
     function nuke() {
-        // 1. Any button containing "keyboard_double" text
         document.querySelectorAll('button').forEach(btn => {
             const txt = (btn.innerText || btn.textContent || '');
             if (txt.includes('keyboard_double') || txt.trim() === 'keyboard_double_arrow_left' || txt.trim() === 'keyboard_double_arrow_right') {
                 hide(btn);
             }
         });
-        // 2. By data-testid
         ['collapsedControl','stSidebarCollapsedControl','stHeader'].forEach(id => {
             document.querySelectorAll('[data-testid="' + id + '"]').forEach(hide);
         });
-        // 3. By aria-label
         ['Close sidebar','Open sidebar','collapse sidebar','expand sidebar'].forEach(label => {
             document.querySelectorAll('button[aria-label="' + label + '"]').forEach(hide);
         });
-        // 4. Any span whose text is the raw material icon name
         document.querySelectorAll('span').forEach(span => {
             const txt = (span.innerText || span.textContent || '').trim();
             if (txt === 'keyboard_double_arrow_left' || txt === 'keyboard_double_arrow_right' || txt.startsWith('keyboard_double')) {
@@ -272,12 +331,13 @@ st.markdown("""
 })();
 </script>
 """, unsafe_allow_html=True)
+
+# ====================== CHART THEME (cached as module-level constants) ======================
 _AXIS_STYLE = dict(
     gridcolor='rgba(255,255,255,0.05)',
     linecolor='rgba(255,255,255,0.1)',
     tickcolor='rgba(255,255,255,0.1)',
 )
-# Base layout — NO xaxis/yaxis keys so callers can pass their own without collision
 _LAYOUT_BASE = dict(
     plot_bgcolor='rgba(0,0,0,0)',
     paper_bgcolor='rgba(0,0,0,0)',
@@ -291,30 +351,82 @@ COLORS = ['#60a5fa', '#a78bfa', '#34d399', '#fbbf24', '#f472b6', '#38bdf8', '#fb
 
 
 def apply_layout(fig, height=500, xaxis_extra=None, yaxis_extra=None):
-    """Apply shared dark theme. Axis overrides are deep-merged to avoid duplicate-kwarg errors."""
+    """Apply shared dark theme."""
     xaxis = {**_AXIS_STYLE, **(xaxis_extra or {})}
     yaxis = {**_AXIS_STYLE, **(yaxis_extra or {})}
     fig.update_layout(height=height, xaxis=xaxis, yaxis=yaxis, **_LAYOUT_BASE)
 
-# ====================== DATA LOADING ======================
-@st.cache_data(show_spinner=False)
+
+def wrap_chart(fig, height=500, xaxis_extra=None, yaxis_extra=None):
+    """Apply shared dark theme + wrap in glass div."""
+    apply_layout(fig, height=height, xaxis_extra=xaxis_extra, yaxis_extra=yaxis_extra)
+    st.markdown('<div class="chart-glass">', unsafe_allow_html=True)
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ====================== OPTIMIZED DATA LOADING ======================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# CSV files (fast) — created by convert_data.py
+_CSV_FILES = [
+    (os.path.join(BASE_DIR, "data", "admission_2023_24.csv"), "2023"),
+    (os.path.join(BASE_DIR, "data", "admission_2024_25.csv"), "2024"),
+    (os.path.join(BASE_DIR, "data", "admission_2025_26.csv"), "2025"),
+    (os.path.join(BASE_DIR, "data", "admission_2026_27.csv"), "2026"),
+]
+
+# XLS files (slow fallback) — original files
+_XLS_FILES = [
+    (os.path.join(BASE_DIR, "20260106153152255_Admission 2023 24.xls"), "2023"),
+    (os.path.join(BASE_DIR, "20260106153439552_Admission 2024 25.xls"), "2024"),
+    (os.path.join(BASE_DIR, "20260106153808096_Admission 2025 26.xls"), "2025"),
+    (os.path.join(BASE_DIR, "20260106153841088_Admission 2026 27.xls"), "2026"),
+]
+
+
+@st.cache_data(show_spinner="Loading admission data…")
 def load_all_data():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    files = [
-        (os.path.join(BASE_DIR, "20260106153152255_Admission 2023 24.xls"), "2023"),
-        (os.path.join(BASE_DIR, "20260106153439552_Admission 2024 25.xls"), "2024"),
-        (os.path.join(BASE_DIR, "20260106153808096_Admission 2025 26.xls"), "2025"),
-        (os.path.join(BASE_DIR, "20260106153841088_Admission 2026 27.xls"), "2026"),
-    ]
+    """Load data from CSV (fast) or XLS (slow fallback). Auto-saves CSV on first XLS load."""
     dfs = []
-    for path, year in files:
+
+    # ── Try CSV first (10-50x faster than XLS) ──
+    for path, year in _CSV_FILES:
         if os.path.exists(path):
             try:
-                df_temp = pd.read_excel(path, header=3, engine='xlrd')
+                df_temp = pd.read_csv(path, low_memory=False)
                 df_temp['Year'] = year
                 dfs.append(df_temp)
             except Exception:
                 pass
+
+    if dfs:
+        return pd.concat(dfs, ignore_index=True)
+
+    # ── Fallback: Read XLS and auto-save as CSV for next time ──
+    data_dir = os.path.join(BASE_DIR, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    csv_names = [
+        "admission_2023_24.csv",
+        "admission_2024_25.csv",
+        "admission_2025_26.csv",
+        "admission_2026_27.csv",
+    ]
+
+    for (xls_path, year), csv_name in zip(_XLS_FILES, csv_names):
+        if os.path.exists(xls_path):
+            try:
+                df_temp = pd.read_excel(xls_path, header=3, engine='xlrd')
+                df_temp['Year'] = year
+                dfs.append(df_temp)
+                # Auto-save CSV so next load is instant
+                try:
+                    df_temp.to_csv(os.path.join(data_dir, csv_name), index=False)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
     if not dfs:
         return pd.DataFrame()
     return pd.concat(dfs, ignore_index=True)
@@ -355,16 +467,18 @@ def compute_kpis(df: pd.DataFrame):
     if df.empty:
         return 0, 0, 0
     total = len(df)
-    # NOTE: must be an exact match, not a substring search — "Not Submitted"
-    # also contains the word "Submitted", so a contains()/SEARCH() check
-    # wrongly counted "Not Submitted" rows as submitted.
-    submitted = (df['Status'].str.strip().str.lower() == 'submitted').sum() if 'Status' in df.columns else 0
-    confirmed = get_confirmed_count(df)
-    return total, int(submitted), int(confirmed)
+    if 'Status' in df.columns:
+        s = df['Status'].astype(str)
+        is_sub = s.str.contains('Submitted|Submit', na=False, case=False) & ~s.str.contains('Not Submitted|NotSubmitted', na=False, case=False)
+        submitted = int(is_sub.sum())
+    else:
+        submitted = 0
+    confirmed = _get_confirmed_count(df)
+    return total, submitted, confirmed
 
 
 @st.cache_data(show_spinner=False)
-def get_confirmed_count(df: pd.DataFrame) -> int:
+def _get_confirmed_count(df: pd.DataFrame) -> int:
     if df.empty:
         return 0
     if '_IsConfirmed' in df.columns:
@@ -376,6 +490,76 @@ def get_confirmed_count(df: pd.DataFrame) -> int:
     if 'Status' in df.columns:
         return int(df['Status'].str.contains('Confirmed|Confirm|Admitted', na=False, case=False).sum())
     return 0
+
+
+# ── Cached chart-data helpers (avoid recomputing on every rerun) ──
+
+@st.cache_data(show_spinner=False)
+def get_top_programs(df: pd.DataFrame, n: int = 10):
+    if df.empty or 'Program1' not in df.columns:
+        return pd.Series(dtype='int64')
+    return df['Program1'].value_counts().head(n)
+
+
+@st.cache_data(show_spinner=False)
+def get_city_counts(df: pd.DataFrame, n: int = 15):
+    if df.empty or 'City' not in df.columns:
+        return pd.DataFrame(columns=['City', 'Count']), 0, 0
+    city_count = df['City'].value_counts().head(n).reset_index()
+    city_count.columns = ['City', 'Count']
+    surat = int((df['City'] == 'Surat').sum())
+    other = len(df) - surat
+    return city_count, surat, other
+
+
+@st.cache_data(show_spinner=False)
+def get_gender_program_data(df: pd.DataFrame, top_n: int = 8):
+    if df.empty or 'Gender' not in df.columns or 'Program1' not in df.columns:
+        return pd.Series(dtype='int64'), pd.DataFrame(), pd.DataFrame()
+    gender_dist = df['Gender'].value_counts()
+    top_progs = df['Program1'].value_counts().head(top_n).index
+    gp = (df[df['Program1'].isin(top_progs)]
+          .groupby(['Gender', 'Program1'], observed=True)
+          .size().reset_index(name='Count'))
+    gender_stats = (
+        df.groupby('Gender', observed=True)
+        .agg(
+            Total=('Status', 'count'),
+            Submitted=('Status', lambda x: x.str.contains('Submitted|Submit', na=False, case=False).sum()),
+            Confirmed=('_IsConfirmed', 'sum')
+        )
+        .reset_index()
+    )
+    gender_stats['Conversion_%'] = (gender_stats['Confirmed'] / gender_stats['Total'] * 100).round(1).fillna(0)
+    return gender_dist, gp, gender_stats
+
+
+@st.cache_data(show_spinner=False)
+def compute_board_counts(df: pd.DataFrame):
+    """Robust board detection — checks each column individually, no row-joining."""
+    if df.empty:
+        return pd.DataFrame(columns=['Board', 'Count'])
+
+    str_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    gseb_mask = pd.Series(False, index=df.index)
+    cbse_mask = pd.Series(False, index=df.index)
+    icse_mask = pd.Series(False, index=df.index)
+    for col in str_cols:
+        col_upper = df[col].astype(str).str.upper()
+        gseb_mask = gseb_mask | col_upper.str.contains('GSEB', na=False)
+        cbse_mask = cbse_mask | col_upper.str.contains('CBSE', na=False)
+        icse_mask = icse_mask | col_upper.str.contains('ICSE', na=False)
+
+    gseb = int(gseb_mask.sum())
+    cbse = int(cbse_mask.sum())
+    icse = int(icse_mask.sum())
+    other = max(0, len(df) - gseb - cbse - icse)
+
+    board_df = pd.DataFrame({
+        'Board': ['GSEB', 'CBSE', 'ICSE', 'Other'],
+        'Count': [gseb, cbse, icse, other],
+    })
+    return board_df[board_df['Count'] > 0].reset_index(drop=True)
 
 
 MARKS_COL = '12th/ HSC Overall / Diploma'
@@ -406,7 +590,6 @@ def get_program_training_data(df: pd.DataFrame):
     if df.empty or MARKS_COL not in df.columns or 'Program1' not in df.columns or '_IsConfirmed' not in df.columns:
         return pd.DataFrame(columns=[MARKS_COL, 'Program1'])
     data = df.loc[df['_IsConfirmed'], [MARKS_COL, 'Program1']].dropna()
-    # Drop bad data entries (some rows have percentages > 100)
     data = data[(data[MARKS_COL] >= 0) & (data[MARKS_COL] <= 100)]
     counts = data['Program1'].value_counts()
     valid_programs = counts[counts >= 15].index
@@ -414,98 +597,28 @@ def get_program_training_data(df: pd.DataFrame):
     return data.reset_index(drop=True)
 
 
-def predict_program(train_data: pd.DataFrame, marks: float, k: int = 25, top_n: int = 3):
-    """
-    Distance-weighted k-nearest-neighbours over a single feature (12th %).
-    Finds the k historical confirmed admissions closest to `marks`, weights
-    each by inverse distance, and aggregates the weight by program — giving
-    a genuine data-driven probability estimate of which program a student
-    with this percentage is likely to be confirmed into, learned straight
-    from the dataset rather than a fixed percentage-bracket rule.
-    """
-    if train_data.empty:
-        return []
-    k = min(k, len(train_data))
-    dist = (train_data[MARKS_COL] - marks).abs().to_numpy()
-    nearest_idx = np.argsort(dist)[:k]
-    nearest = train_data.iloc[nearest_idx].copy()
-    nearest['_weight'] = 1.0 / (dist[nearest_idx] + 0.5)  # +0.5 avoids divide-by-zero on exact matches
-    scores = nearest.groupby('Program1')['_weight'].sum()
-    scores = (scores / scores.sum()).sort_values(ascending=False)
-    return list(scores.head(top_n).items())
 
-
-@st.cache_resource(show_spinner=False)
-def get_anthropic_client():
-    """
-    Build the Anthropic client from a Streamlit secret / env var.
-    Returns None if no key is configured or the SDK isn't installed —
-    callers must handle that gracefully rather than crashing the page.
-    """
-    if not _ANTHROPIC_AVAILABLE:
-        return None
-    api_key = None
-    try:
-        api_key = st.secrets.get("ANTHROPIC_API_KEY")
-    except Exception:
-        pass
-    api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-    return anthropic.Anthropic(api_key=api_key)
 
 
 @st.cache_data(show_spinner=False)
-def llm_recommend_program(marks: float, neighbor_counts: tuple, model_name: str = "claude-haiku-4-5-20251001"):
-    """
-    Ask Claude to recommend a program, grounded in the SAME nearest-neighbour
-    evidence the KNN model uses (not the full dataset, and not general
-    knowledge) — so its answer is reasoning over real historical admissions
-    at this university, with a short natural-language explanation attached.
-
-    neighbor_counts: tuple of (program_name, count) pairs, most-common first,
-    from the k historical confirmed admissions closest to `marks`. Passed as
-    a tuple (not a DataFrame) so st.cache_data can hash it as a cache key —
-    repeated calls with the same marks won't re-hit the API.
-    """
-    client = get_anthropic_client()
-    if client is None:
-        return None
-
-    context_lines = "\n".join(f"- {prog}: {cnt} students" for prog, cnt in neighbor_counts)
-    prompt = (
-        f"You are analyzing Sarvajanik University's historical confirmed-admission data.\n"
-        f"A prospective student has a 12th grade percentage of {marks}%.\n\n"
-        f"Among the historically confirmed students with the closest 12th percentage to "
-        f"this student, here is the breakdown of which programs they were admitted into:\n"
-        f"{context_lines}\n\n"
-        f"Based only on this data, recommend the single most likely program for this "
-        f"student and briefly explain your reasoning in 1-2 sentences. Respond in exactly "
-        f"this format:\nProgram: <program name>\nReasoning: <short reasoning>"
-    )
-    try:
-        resp = client.messages.create(
-            model=model_name,
-            max_tokens=150,
-            messages=[{"role": "user", "content": prompt}],
+def get_yearly_conversion(df: pd.DataFrame):
+    if df.empty or 'Year' not in df.columns or 'Status' not in df.columns:
+        return pd.DataFrame()
+    yearly = (
+        df.groupby('Year')
+        .agg(
+            Total=('Status', 'count'),
+            Confirmed=('_IsConfirmed', 'sum')
         )
-        return resp.content[0].text.strip()
-    except Exception as e:
-        return f"⚠️ LLM call failed: {e}"
-
-
-def wrap_chart(fig, height=500, xaxis_extra=None, yaxis_extra=None):
-    """Apply shared dark theme + wrap in glass div."""
-    apply_layout(fig, height=height, xaxis_extra=xaxis_extra, yaxis_extra=yaxis_extra)
-    st.markdown('<div class="chart-glass">', unsafe_allow_html=True)
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-    st.markdown('</div>', unsafe_allow_html=True)
+        .reset_index()
+    )
+    yearly['Conversion_%'] = (yearly['Confirmed'] / yearly['Total'] * 100).round(1)
+    return yearly
 
 
 # ====================== LOAD & CLEAN ======================
-with st.spinner("Loading data…"):
-    raw_df = load_all_data()
-    df = clean_data(raw_df)
+raw_df = load_all_data()
+df = clean_data(raw_df)
 
 # ====================== SIDEBAR ======================
 with st.sidebar:
@@ -540,33 +653,93 @@ with st.sidebar:
         "📚 Board & Stream",
         "📢 Source & Category",
         "🔮 Advanced Analytics",
+        "📅 Year Wise Breakdown",
     ]
 
-    # Initialise session state
+    # Handle URL query params for hover links
+    q_params = st.query_params
+    if q_params.get("page") in ["📅 Year Wise Breakdown", "Year Wise Breakdown"]:
+        st.session_state["page"] = "📅 Year Wise Breakdown"
+    if "year" in q_params:
+        st.session_state["year_selected"] = q_params["year"]
+    if "metric" in q_params:
+        st.session_state["year_metric_selected"] = q_params["metric"]
+
     if "page" not in st.session_state:
         st.session_state["page"] = NAV_ITEMS[0]
+    if "year_selected" not in st.session_state:
+        st.session_state["year_selected"] = "2023-2024"
+    if "year_metric_selected" not in st.session_state:
+        st.session_state["year_metric_selected"] = "🏆 Program Popularity"
 
     for item in NAV_ITEMS:
         is_active = st.session_state["page"] == item
-        active_style = (
-            "background:rgba(96,165,250,0.15);color:#60a5fa;border:1px solid rgba(96,165,250,0.3);"
-            if is_active else
-            "background:transparent;color:#94a3b8;border:1px solid transparent;"
-        )
-        if st.button(
-            item,
-            key=f"nav_{item}",
-            use_container_width=True,
-            help=item,
-        ):
-            st.session_state["page"] = item
-            st.rerun()
+        if item == "📅 Year Wise Breakdown":
+            if st.button("📅 Year Wise Breakdown", key="nav_year_breakdown_btn", use_container_width=True):
+                st.session_state["page"] = item
+                st.rerun()
 
-    # Build active-item highlight CSS (targets the nth button in sidebar)
-    active_idx = NAV_ITEMS.index(st.session_state["page"])
+            menu_html = """
+            <div class="year-menu-wrapper">
+                <div class="year-menu-l1">
+                    <div class="year-item-l1">
+                        <span>📅 2023-2024</span>
+                        <span style="font-size:0.65rem;">▶</span>
+                        <div class="year-menu-l2">
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2023-2024&metric=🏆+Program+Popularity" target="_self" class="metric-item-l2">🏆 Program Popularity</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2023-2024&metric=🏷️+Admissions+Category" target="_self" class="metric-item-l2">🏷️ Admissions Category</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2023-2024&metric=👥+Gender+Analysis" target="_self" class="metric-item-l2">👥 Gender Analysis</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2023-2024&metric=📚+Board+%26+Stream" target="_self" class="metric-item-l2">📚 Board & Stream</a>
+                        </div>
+                    </div>
+                    <div class="year-item-l1">
+                        <span>📅 2024-2025</span>
+                        <span style="font-size:0.65rem;">▶</span>
+                        <div class="year-menu-l2">
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2024-2025&metric=🏆+Program+Popularity" target="_self" class="metric-item-l2">🏆 Program Popularity</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2024-2025&metric=🏷️+Admissions+Category" target="_self" class="metric-item-l2">🏷️ Admissions Category</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2024-2025&metric=👥+Gender+Analysis" target="_self" class="metric-item-l2">👥 Gender Analysis</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2024-2025&metric=📚+Board+%26+Stream" target="_self" class="metric-item-l2">📚 Board & Stream</a>
+                        </div>
+                    </div>
+                    <div class="year-item-l1">
+                        <span>📅 2025-2026</span>
+                        <span style="font-size:0.65rem;">▶</span>
+                        <div class="year-menu-l2">
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2025-2026&metric=🏆+Program+Popularity" target="_self" class="metric-item-l2">🏆 Program Popularity</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2025-2026&metric=🏷️+Admissions+Category" target="_self" class="metric-item-l2">🏷️ Admissions Category</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2025-2026&metric=👥+Gender+Analysis" target="_self" class="metric-item-l2">👥 Gender Analysis</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2025-2026&metric=📚+Board+%26+Stream" target="_self" class="metric-item-l2">📚 Board & Stream</a>
+                        </div>
+                    </div>
+                    <div class="year-item-l1">
+                        <span>📅 2026-2027</span>
+                        <span style="font-size:0.65rem;">▶</span>
+                        <div class="year-menu-l2">
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2026-2027&metric=🏆+Program+Popularity" target="_self" class="metric-item-l2">🏆 Program Popularity</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2026-2027&metric=🏷️+Admissions+Category" target="_self" class="metric-item-l2">🏷️ Admissions Category</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2026-2027&metric=👥+Gender+Analysis" target="_self" class="metric-item-l2">👥 Gender Analysis</a>
+                            <a href="?page=📅+Year+Wise+Breakdown&year=2026-2027&metric=📚+Board+%26+Stream" target="_self" class="metric-item-l2">📚 Board & Stream</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """
+            st.markdown(menu_html, unsafe_allow_html=True)
+        else:
+            if st.button(
+                item,
+                key=f"nav_{item}",
+                use_container_width=True,
+                help=item,
+            ):
+                st.session_state["page"] = item
+                st.rerun()
+
+    # Build active-item highlight CSS
+    active_idx = NAV_ITEMS.index(st.session_state["page"]) if st.session_state["page"] in NAV_ITEMS else 0
     active_css = f"""
     <style>
-        /* Base nav button style */
         [data-testid="stSidebar"] .stButton > button {{
             background: transparent !important;
             border: 1px solid transparent !important;
@@ -590,7 +763,10 @@ with st.sidebar:
             box-shadow: none !important;
             outline: none !important;
         }}
-        /* Active item highlight */
+        [data-testid="stSidebar"] .stButton:last-of-type > button {{
+            background: rgba(148,163,184,0.08) !important;
+            border-color: rgba(148,163,184,0.12) !important;
+        }}
         [data-testid="stSidebar"] .stButton:nth-of-type({active_idx + 1}) > button {{
             background: rgba(96,165,250,0.15) !important;
             color: #60a5fa !important;
@@ -613,7 +789,7 @@ with st.sidebar:
 
 page = st.session_state.get("page", NAV_ITEMS[0])
 
-# ====================== PAGES ======================
+# ====================== PAGES (lazy — only compute what's needed) ======================
 
 if page == "🏠 Home Overview":
     st.markdown('<span class="section-label">Dashboard</span>', unsafe_allow_html=True)
@@ -625,13 +801,12 @@ if page == "🏠 Home Overview":
     conv = round(confirmed / total * 100, 1) if total > 0 else 0
 
     c1, c2, c3, c4 = st.columns(4)
-    cards = [
+    for col, cls, label, value, sub in [
         (c1, "card-blue",   "Total Inquiries",       f"{total:,}",     "All-time records"),
         (c2, "card-green",  "Submitted",             f"{submitted:,}", "Applications filed"),
         (c3, "card-amber",  "Confirmed Admissions",  f"{confirmed:,}", "Seat confirmed"),
         (c4, "card-violet", "Conversion Rate",       f"{conv}%",       "Inquiry → Admit"),
-    ]
-    for col, cls, label, value, sub in cards:
+    ]:
         with col:
             st.markdown(f"""
             <div class="glass-card {cls}">
@@ -642,8 +817,8 @@ if page == "🏠 Home Overview":
 
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty and 'Program1' in df.columns:
-        top10 = df['Program1'].value_counts().head(10)
+    top10 = get_top_programs(df, 10)
+    if not top10.empty:
         fig = px.bar(top10, text_auto=True, title="Top 10 Most Applied Programs",
                      color_discrete_sequence=COLORS)
         fig.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
@@ -667,7 +842,6 @@ elif page == "📈 Inquiry Funnel":
         fig.update_layout(title="Admission Conversion Funnel")
         wrap_chart(fig, height=550)
 
-        # Mini KPI row
         rate_sub = round(submitted / total * 100, 1) if total else 0
         rate_con = round(confirmed / total * 100, 1) if total else 0
         c1, c2, c3 = st.columns(3)
@@ -684,10 +858,11 @@ elif page == "🏆 Program Popularity":
     st.title("Program Popularity")
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty and 'Program1' in df.columns:
-        top15 = df['Program1'].value_counts().head(15).reset_index()
-        top15.columns = ['Program', 'Count']
-        fig = px.bar(top15, x='Count', y='Program', orientation='h',
+    top15 = get_top_programs(df, 15)
+    if not top15.empty:
+        top15_df = top15.reset_index()
+        top15_df.columns = ['Program', 'Count']
+        fig = px.bar(top15_df, x='Count', y='Program', orientation='h',
                      text_auto=True, title="Top 15 Programs by Demand",
                      color='Count', color_continuous_scale='Blues')
         fig.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
@@ -695,32 +870,19 @@ elif page == "🏆 Program Popularity":
 
 elif page == "🗺️ Geographic Analysis":
     st.markdown('<span class="section-label">Geography</span>', unsafe_allow_html=True)
-    header_col, kpi_col = st.columns([3, 1])
-    with header_col:
-        st.title("Geographic Analysis")
-        st.markdown('<h2>Surat & South Gujarat focus</h2>', unsafe_allow_html=True)
-    with kpi_col:
-        geo_total, _, _ = compute_kpis(df)
-        st.markdown(f"""
-        <div class="glass-card card-blue">
-            <div class="card-label">Total Inquiries</div>
-            <div class="card-value">{geo_total:,}</div>
-            <div class="card-sub">All-time records</div>
-        </div>""", unsafe_allow_html=True)
+    st.title("Geographic Analysis")
+    st.markdown('<h2>Surat & South Gujarat focus</h2>', unsafe_allow_html=True)
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty and 'City' in df.columns:
+    city_count, surat_count, other_count = get_city_counts(df, 15)
+    if not city_count.empty:
         c1, c2 = st.columns([3, 2])
         with c1:
-            city_count = df['City'].value_counts().head(15).reset_index()
-            city_count.columns = ['City', 'Count']
             fig1 = px.bar(city_count, x='Count', y='City', orientation='h',
                           text_auto=True, title="Top 15 Cities by Inquiries",
                           color='Count', color_continuous_scale='Blues')
             wrap_chart(fig1, height=480, yaxis_extra={'categoryorder': 'total ascending'})
         with c2:
-            surat_count = (df['City'] == 'Surat').sum()
-            other_count = len(df) - surat_count
             fig2 = px.pie(
                 values=[surat_count, other_count],
                 names=['Surat', 'Other Regions'],
@@ -735,41 +897,29 @@ elif page == "👥 Gender Analysis":
     st.title("Gender Analysis")
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty and 'Gender' in df.columns and 'Program1' in df.columns:
+    gender_dist, gp, gender_stats = get_gender_program_data(df)
+    if not gender_dist.empty:
         c1, c2 = st.columns([2, 3])
         with c1:
-            gender_dist = df['Gender'].value_counts()
             fig1 = px.pie(names=gender_dist.index, values=gender_dist.values,
                           title="Gender Distribution", hole=0.5,
                           color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
             fig1.update_traces(textfont_color='#e2e8f0', marker_line_color='rgba(0,0,0,0)')
             wrap_chart(fig1, height=380)
         with c2:
-            top_progs = df['Program1'].value_counts().head(8).index
-            gp = (df[df['Program1'].isin(top_progs)]
-                  .groupby(['Gender', 'Program1'], observed=True)
-                  .size().reset_index(name='Count'))
-            fig2 = px.bar(gp, x='Program1', y='Count', color='Gender',
-                          title="Program Preference by Gender", barmode='group',
-                          color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
-            wrap_chart(fig2, height=380, xaxis_extra={'tickangle': -30})
+            if not gp.empty:
+                fig2 = px.bar(gp, x='Program1', y='Count', color='Gender',
+                              title="Program Preference by Gender", barmode='group',
+                              color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
+                wrap_chart(fig2, height=380, xaxis_extra={'tickangle': -30})
 
         st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
-        gender_stats = (
-            df.groupby('Gender', observed=True)
-            .agg(
-                Total=('Status', 'count'),
-                Submitted=('Status', lambda x: (x.str.strip().str.lower() == 'submitted').sum()),
-                Confirmed=('_IsConfirmed', 'sum')
-            )
-            .reset_index()
-        )
-        gender_stats['Conversion_%'] = (gender_stats['Confirmed'] / gender_stats['Total'] * 100).round(1).fillna(0)
-        fig3 = px.bar(gender_stats, x='Gender', y='Conversion_%', text_auto=True,
-                      title="Conversion Rate by Gender (%)",
-                      color_discrete_sequence=['#a78bfa'])
-        fig3.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
-        wrap_chart(fig3)
+        if not gender_stats.empty:
+            fig3 = px.bar(gender_stats, x='Gender', y='Conversion_%', text_auto=True,
+                          title="Conversion Rate by Gender (%)",
+                          color_discrete_sequence=['#a78bfa'])
+            fig3.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+            wrap_chart(fig3)
 
 elif page == "📚 Board & Stream":
     st.markdown('<span class="section-label">Academic Background</span>', unsafe_allow_html=True)
@@ -777,29 +927,8 @@ elif page == "📚 Board & Stream":
     st.markdown('<h2>GSEB · CBSE · ICSE &nbsp;·&nbsp; Science · Commerce · Arts</h2>', unsafe_allow_html=True)
     st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
-    if not df.empty:
-        # Board detection — check each text column individually (no row-joining needed)
-        str_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-        gseb_mask = pd.Series(False, index=df.index)
-        cbse_mask = pd.Series(False, index=df.index)
-        icse_mask = pd.Series(False, index=df.index)
-        for col in str_cols:
-            col_upper = df[col].astype(str).str.upper()
-            gseb_mask = gseb_mask | col_upper.str.contains('GSEB', na=False)
-            cbse_mask = cbse_mask | col_upper.str.contains('CBSE', na=False)
-            icse_mask = icse_mask | col_upper.str.contains('ICSE', na=False)
-        gseb_count = int(gseb_mask.sum())
-        cbse_count = int(cbse_mask.sum())
-        icse_count = int(icse_mask.sum())
-        other_count = max(0, len(df) - gseb_count - cbse_count - icse_count)
-
-        board_df = pd.DataFrame({
-            'Board':  ['GSEB', 'CBSE', 'ICSE', 'Other'],
-            'Count':  [gseb_count, cbse_count, icse_count, other_count],
-        })
-        # Drop boards with 0 students
-        board_df = board_df[board_df['Count'] > 0].reset_index(drop=True)
-
+    board_df = compute_board_counts(df)
+    if not board_df.empty:
         c1, c2 = st.columns(2)
         with c1:
             fig1 = px.bar(
@@ -826,8 +955,6 @@ elif page == "📚 Board & Stream":
                 pull=[0.04, 0.04, 0.04, 0],
             )
             wrap_chart(fig2, height=420)
-
-        # ── end of Board & Stream page ──
 
 elif page == "📢 Source & Category":
     st.markdown('<span class="section-label">Acquisition & Reservation</span>', unsafe_allow_html=True)
@@ -927,23 +1054,55 @@ elif page == "🔮 Advanced Analytics":
     if not df.empty:
         c1, c2 = st.columns(2)
         with c1:
-            if 'Year' in df.columns and 'Status' in df.columns:
-                yearly = (
-                    df.groupby('Year')
-                    .agg(
-                        Total=('Status', 'count'),
-                        Confirmed=('_IsConfirmed', 'sum')
-                    )
-                    .reset_index()
-                )
-                yearly['Conversion_%'] = (yearly['Confirmed'] / yearly['Total'] * 100).round(1)
+            yearly = get_yearly_conversion(df)
+            if not yearly.empty:
                 fig1 = px.line(yearly, x='Year', y='Conversion_%', markers=True,
                                title="Year-wise Conversion Rate Trend",
                                color_discrete_sequence=['#60a5fa'])
                 fig1.update_traces(line_width=3, marker_size=8, marker_color='#a78bfa')
                 wrap_chart(fig1)
 
+        with c2:
+            st.markdown("**🎯 Program Recommendation (ML Model)**")
+            marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
 
+            train_data = get_program_training_data(df)
+            if not train_data.empty:
+                st.caption(f"Model trained on {len(train_data):,} confirmed admissions (2023–2026), matched by 12th % → actual program.")
+                results = predict_program(train_data, marks)
+                medals = ["🥇", "🥈", "🥉"]
+                if results:
+                    for rank, (program, score) in enumerate(results):
+                        st.markdown(f"**{medals[rank]} {program}** — {score * 100:.0f}% likelihood")
+                else:
+                    st.info("No close historical match at this percentage yet.")
+            else:
+                st.info("Not enough confirmed-admission records with 12th % on file to train a model yet.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("**🤖 Ask Claude (LLM)**")
+            if get_anthropic_client() is None:
+                st.caption(
+                    "Not configured. Add `ANTHROPIC_API_KEY` under Settings → Secrets "
+                    "on Streamlit Cloud to enable this."
+                )
+            elif not train_data.empty:
+                st.caption("Claude reasons over the same nearby historical students as the model above, and explains why.")
+                if st.button("Get Claude's recommendation"):
+                    k = min(25, len(train_data))
+                    dist = (train_data[MARKS_COL] - marks).abs().to_numpy()
+                    nearest_idx = np.argsort(dist)[:k]
+                    neighbor_counts = tuple(
+                        train_data.iloc[nearest_idx]['Program1'].value_counts().items()
+                    )
+                    with st.spinner("Asking Claude..."):
+                        answer = llm_recommend_program(marks, neighbor_counts)
+                    if answer:
+                        st.markdown(answer)
+                    else:
+                        st.info("Couldn't reach the LLM — check your API key.")
+
+        st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
         total, _, confirmed = compute_kpis(df)
         occ_rate = round(confirmed / max(total, 1) * 100, 1)
@@ -953,6 +1112,209 @@ elif page == "🔮 Advanced Analytics":
         with c5: st.metric("Confirmed Admissions", f"{confirmed:,}")
 
         st.info("**Roadmap** · ML-based admission forecasting · AI chatbot for student queries · Personalised program recommendation engine")
+
+elif page == "📅 Year Wise Breakdown":
+    st.markdown('<span class="section-label">Yearly Deep Dive</span>', unsafe_allow_html=True)
+    st.title("Year Wise Breakdown")
+    st.markdown('<h2>Select Academic Year & Metric for granular analysis</h2>', unsafe_allow_html=True)
+    st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+
+    YEAR_MAP = {
+        "2023-2024": "2023",
+        "2024-2025": "2024",
+        "2025-2026": "2025",
+        "2026-2027": "2026",
+    }
+    years_list = list(YEAR_MAP.keys())
+    metrics_list = ["🏆 Program Popularity", "🏷️ Admissions Category", "👥 Gender Analysis", "📚 Board & Stream"]
+
+    c_yr, c_met = st.columns([1, 1])
+    with c_yr:
+        st.markdown("<div style='font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:#60a5fa;text-transform:uppercase;margin-bottom:6px;'>📅 Academic Year</div>", unsafe_allow_html=True)
+        selected_year = st.radio(
+            "Select Year",
+            years_list,
+            index=years_list.index(st.session_state.get("year_selected", "2023-2024")) if st.session_state.get("year_selected") in years_list else 0,
+            key="yr_radio",
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        st.session_state["year_selected"] = selected_year
+
+    with c_met:
+        st.markdown("<div style='font-size:0.75rem;font-weight:700;letter-spacing:0.08em;color:#a78bfa;text-transform:uppercase;margin-bottom:6px;'>📊 Sub-Analysis Metric</div>", unsafe_allow_html=True)
+        selected_metric = st.radio(
+            "Select Metric",
+            metrics_list,
+            index=metrics_list.index(st.session_state.get("year_metric_selected", "🏆 Program Popularity")) if st.session_state.get("year_metric_selected") in metrics_list else 0,
+            key="met_radio",
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+        st.session_state["year_metric_selected"] = selected_metric
+
+    st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+
+    # Filter data for selected year
+    year_code = YEAR_MAP[selected_year]
+    year_df = df[df['Year'] == year_code].copy() if not df.empty and 'Year' in df.columns else pd.DataFrame()
+
+    if year_df.empty:
+        st.warning(f"No records available for Academic Year {selected_year}.")
+    else:
+        # Display KPIs for selected year
+        total_yr, sub_yr, conf_yr = compute_kpis(year_df)
+        conv_yr = round(conf_yr / total_yr * 100, 1) if total_yr > 0 else 0
+
+        k1, k2, k3, k4 = st.columns(4)
+        for col, cls, label, val, sub_t in [
+            (k1, "card-blue",   f"AY {selected_year} Records", f"{total_yr:,}", "Total inquiries"),
+            (k2, "card-green",  "Submitted Applications",      f"{sub_yr:,}",  "Filed forms"),
+            (k3, "card-amber",  "Confirmed Admissions",       f"{conf_yr:,}", "Admitted seats"),
+            (k4, "card-violet", "Year Conversion Rate",        f"{conv_yr}%",  "Inquiry → Admit"),
+        ]:
+            with col:
+                st.markdown(f"""
+                <div class="glass-card {cls}">
+                    <div class="card-label">{label}</div>
+                    <div class="card-value">{val}</div>
+                    <div class="card-sub">{sub_t}</div>
+                </div>""", unsafe_allow_html=True)
+
+        st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+
+        # Render chosen metric view for this year
+        if selected_metric == "🏆 Program Popularity":
+            st.markdown(f"### 🏆 Program Popularity — AY {selected_year}")
+            if 'Program1' in year_df.columns:
+                top15_yr = year_df['Program1'].value_counts().head(15).reset_index()
+                top15_yr.columns = ['Program', 'Count']
+                fig_p = px.bar(top15_yr, x='Count', y='Program', orientation='h',
+                               text_auto=True, title=f"Top Programs by Demand ({selected_year})",
+                               color='Count', color_continuous_scale='Blues')
+                fig_p.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+                wrap_chart(fig_p, height=560, yaxis_extra={'categoryorder': 'total ascending'})
+            else:
+                st.info("Program data not available for this year.")
+
+        elif selected_metric == "🏷️ Admissions Category":
+            st.markdown(f"### 🏷️ Admissions Category — AY {selected_year}")
+            if 'Category' in year_df.columns:
+                cat_yr = year_df[year_df['Category'].notna()].copy()
+                c1_cat, c2_cat = st.columns([2, 3])
+                with c1_cat:
+                    cat_dist = cat_yr['Category'].value_counts()
+                    fig_c1 = px.pie(names=cat_dist.index, values=cat_dist.values,
+                                    title=f"Category Distribution ({selected_year})", hole=0.48,
+                                    color_discrete_sequence=['#60a5fa', '#a78bfa', '#fbbf24', '#f472b6', '#34d399'])
+                    fig_c1.update_traces(textfont_color='#e2e8f0', textinfo='label+percent',
+                                         marker_line_color='rgba(0,0,0,0.15)', marker_line_width=2)
+                    wrap_chart(fig_c1, height=420)
+
+                with c2_cat:
+                    cat_stats = (
+                        cat_yr.groupby('Category', observed=True)
+                        .agg(Total=('Status', 'count'), Confirmed=('_IsConfirmed', 'sum'))
+                        .reset_index()
+                    )
+                    cat_stats['Conversion_%'] = (cat_stats['Confirmed'] / cat_stats['Total'] * 100).round(1).fillna(0)
+                    cat_stats = cat_stats.sort_values('Conversion_%', ascending=False)
+                    fig_c2 = px.bar(cat_stats, x='Category', y='Conversion_%', text_auto=True,
+                                    title=f"Conversion Rate by Category (%) ({selected_year})",
+                                    color_discrete_sequence=['#a78bfa'])
+                    fig_c2.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+                    wrap_chart(fig_c2, height=420)
+            else:
+                st.info("Category data not available for this year.")
+
+        elif selected_metric == "👥 Gender Analysis":
+            st.markdown(f"### 👥 Gender Analysis — AY {selected_year}")
+            if 'Gender' in year_df.columns and 'Program1' in year_df.columns:
+                c1_g, c2_g = st.columns([2, 3])
+                with c1_g:
+                    g_dist = year_df['Gender'].value_counts()
+                    fig_g1 = px.pie(names=g_dist.index, values=g_dist.values,
+                                    title=f"Gender Distribution ({selected_year})", hole=0.5,
+                                    color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
+                    fig_g1.update_traces(textfont_color='#e2e8f0', marker_line_color='rgba(0,0,0,0)')
+                    wrap_chart(fig_g1, height=380)
+
+                with c2_g:
+                    top_p = year_df['Program1'].value_counts().head(8).index
+                    gp = (year_df[year_df['Program1'].isin(top_p)]
+                          .groupby(['Gender', 'Program1'], observed=True)
+                          .size().reset_index(name='Count'))
+                    fig_g2 = px.bar(gp, x='Program1', y='Count', color='Gender',
+                                    title=f"Program Preference by Gender ({selected_year})", barmode='group',
+                                    color_discrete_sequence=['#60a5fa', '#f472b6', '#a78bfa'])
+                    wrap_chart(fig_g2, height=380, xaxis_extra={'tickangle': -30})
+
+                st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
+                g_stats = (
+                    year_df.groupby('Gender', observed=True)
+                    .agg(
+                        Total=('Status', 'count'),
+                        Submitted=('Status', lambda x: x.str.contains('Submitted|Submit', na=False, case=False).sum()),
+                        Confirmed=('_IsConfirmed', 'sum')
+                    )
+                    .reset_index()
+                )
+                g_stats['Conversion_%'] = (g_stats['Confirmed'] / g_stats['Total'] * 100).round(1).fillna(0)
+                fig_g3 = px.bar(g_stats, x='Gender', y='Conversion_%', text_auto=True,
+                                title=f"Conversion Rate by Gender (%) ({selected_year})",
+                                color_discrete_sequence=['#a78bfa'])
+                fig_g3.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+                wrap_chart(fig_g3, height=400)
+            else:
+                st.info("Gender data not available for this year.")
+
+        elif selected_metric == "📚 Board & Stream":
+            st.markdown(f"### 📚 Board & Stream Analysis — AY {selected_year}")
+            str_cols = year_df.select_dtypes(include=['object', 'category']).columns.tolist()
+            gseb_mask = pd.Series(False, index=year_df.index)
+            cbse_mask = pd.Series(False, index=year_df.index)
+            icse_mask = pd.Series(False, index=year_df.index)
+            for col in str_cols:
+                col_upper = year_df[col].astype(str).str.upper()
+                gseb_mask = gseb_mask | col_upper.str.contains('GSEB', na=False)
+                cbse_mask = cbse_mask | col_upper.str.contains('CBSE', na=False)
+                icse_mask = icse_mask | col_upper.str.contains('ICSE', na=False)
+            g_cnt = int(gseb_mask.sum())
+            c_cnt = int(cbse_mask.sum())
+            i_cnt = int(icse_mask.sum())
+            o_cnt = max(0, len(year_df) - g_cnt - c_cnt - i_cnt)
+
+            board_yr = pd.DataFrame({
+                'Board': ['GSEB', 'CBSE', 'ICSE', 'Other'],
+                'Count': [g_cnt, c_cnt, i_cnt, o_cnt],
+            })
+            board_yr = board_yr[board_yr['Count'] > 0].reset_index(drop=True)
+
+            c1_b, c2_b = st.columns(2)
+            with c1_b:
+                fig_b1 = px.bar(
+                    board_yr, x='Board', y='Count', text_auto=True,
+                    title=f"Students by Board ({selected_year})",
+                    color='Board',
+                    color_discrete_map={'GSEB': '#60a5fa', 'CBSE': '#34d399', 'ICSE': '#fbbf24', 'Other': '#64748b'},
+                )
+                fig_b1.update_traces(marker_line_width=0, textfont_color='#e2e8f0')
+                wrap_chart(fig_b1, height=420)
+
+            with c2_b:
+                fig_b2 = px.pie(
+                    board_yr, names='Board', values='Count',
+                    title=f"Board Distribution ({selected_year})", hole=0.48,
+                    color='Board',
+                    color_discrete_map={'GSEB': '#60a5fa', 'CBSE': '#34d399', 'ICSE': '#fbbf24', 'Other': '#64748b'},
+                )
+                fig_b2.update_traces(
+                    textfont_color='#e2e8f0',
+                    textinfo='label+percent',
+                    marker_line_color='rgba(0,0,0,0.15)',
+                    marker_line_width=2,
+                )
+                wrap_chart(fig_b2, height=420)
 
 # ====================== FOOTER ======================
 st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
