@@ -570,7 +570,7 @@ def find_column(df: pd.DataFrame, keyword: str):
 @st.cache_data(show_spinner=False)
 def get_program_training_data(df: pd.DataFrame):
 
-    if df.empty or MARKS_COL not in df.columns or 'Program1' not in df.columns or '_IsConfirmed' not in df.columns:
+    """if df.empty or MARKS_COL not in df.columns or 'Program1' not in df.columns or '_IsConfirmed' not in df.columns:
         return pd.DataFrame(columns=[MARKS_COL, 'Program1'])
     data = df.loc[df['_IsConfirmed'], [MARKS_COL, 'Program1']].dropna()
     data = data[(data[MARKS_COL] >= 0) & (data[MARKS_COL] <= 100)]
@@ -579,7 +579,7 @@ def get_program_training_data(df: pd.DataFrame):
     data = data[data['Program1'].isin(valid_programs)]
     return data.reset_index(drop=True)
 
-
+"""
 
 
 
