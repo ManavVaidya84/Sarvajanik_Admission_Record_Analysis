@@ -944,46 +944,6 @@ elif page == "🔮 Advanced Analytics":
                 wrap_chart(fig1)
 
         with c2:
-            st.markdown("**🎯 Program Recommendation (ML Model)**")
-            marks = st.slider("Your 12th Grade Percentage", 40, 100, 75)
-
-            train_data = get_program_training_data(df)
-            if not train_data.empty:
-                st.caption(f"Model trained on {len(train_data):,} confirmed admissions (2023–2026), matched by 12th % → actual program.")
-                results = predict_program(train_data, marks)
-                medals = ["🥇", "🥈", "🥉"]
-                if results:
-                    for rank, (program, score) in enumerate(results):
-                        st.markdown(f"**{medals[rank]} {program}** — {score * 100:.0f}% likelihood")
-                else:
-                    st.info("No close historical match at this percentage yet.")
-            else:
-                st.info("Not enough confirmed-admission records with 12th % on file to train a model yet.")
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("**🤖 Ask Claude (LLM)**")
-            if get_anthropic_client() is None:
-                st.caption(
-                    "Not configured. Add `ANTHROPIC_API_KEY` under Settings → Secrets "
-                    "on Streamlit Cloud to enable this."
-                )
-            elif not train_data.empty:
-                st.caption("Claude reasons over the same nearby historical students as the model above, and explains why.")
-                if st.button("Get Claude's recommendation"):
-                    k = min(25, len(train_data))
-                    dist = (train_data[MARKS_COL] - marks).abs().to_numpy()
-                    nearest_idx = np.argsort(dist)[:k]
-                    neighbor_counts = tuple(
-                        train_data.iloc[nearest_idx]['Program1'].value_counts().items()
-                    )
-                    with st.spinner("Asking Claude..."):
-                        answer = llm_recommend_program(marks, neighbor_counts)
-                    if answer:
-                        st.markdown(answer)
-                    else:
-                        st.info("Couldn't reach the LLM — check your API key.")
-
-        st.markdown('<hr class="divider"/>', unsafe_allow_html=True)
 
         total, _, confirmed = compute_kpis(df)
         occ_rate = round(confirmed / max(total, 1) * 100, 1)
